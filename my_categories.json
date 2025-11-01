@@ -1,0 +1,9 @@
+{
+  "test_kategorie": {
+    "display_name": "Test Kategorie",
+    "search_strings": [
+      "Test"
+    ],
+    "regex_patterns": []
+  }
+}

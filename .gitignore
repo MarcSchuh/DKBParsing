@@ -29,3 +29,5 @@ dmypy.json
 # OS files
 .DS_Store
 Thumbs.db
+
+old-approach/*
