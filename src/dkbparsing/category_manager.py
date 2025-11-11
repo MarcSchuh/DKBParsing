@@ -378,12 +378,12 @@ class CategoryManager:
         """Remove a manual assignment."""
         initial_count = len(self.manual_assignments)
         self.manual_assignments = [
-            a
-            for a in self.manual_assignments
+            manual_assignment
+            for manual_assignment in self.manual_assignments
             if not (
-                a["date"] == date
-                and a["recipient"] == recipient
-                and a["purpose"] == purpose
+                manual_assignment["date"] == date
+                and manual_assignment["recipient"] == recipient
+                and manual_assignment["purpose"] == purpose
             )
         ]
 

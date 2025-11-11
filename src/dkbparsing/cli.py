@@ -234,12 +234,12 @@ def main():
             sys.exit(1)
 
         if outputs_printed:
-            print("\n" + "=" * 50 + "\n")  # noqa: T201
+            logger.info("\n" + "=" * 50 + "\n")
 
         # Template contains category names directly
         household_output = dkb_parser.format_household(result, output_template)
         # Output to stdout for user to copy/paste
-        print(household_output)  # noqa: T201
+        logger.info(household_output)
         outputs_printed.append("household")
 
 
