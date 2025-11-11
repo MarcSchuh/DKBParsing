@@ -39,7 +39,7 @@ class CategoryManager:
         else:
             logger.debug("No manual assignments file provided or file does not exist")
 
-    def add_category(self, category: Category, auto_save: bool = True) -> None:
+    def add_category(self, category: Category) -> None:
         """Add a new category."""
         if category.name in self.categories:
             logger.warning(f"Category '{category.name}' already exists, overwriting")
@@ -48,7 +48,7 @@ class CategoryManager:
         self.categories[category.name] = category
 
         # Auto-save if config file is set
-        if auto_save and self.config_file:
+        if self.config_file:
             try:
                 self.save_categories()
             except Exception as e:
@@ -56,20 +56,15 @@ class CategoryManager:
                     f"Failed to auto-save categories after adding '{category.name}': {e}. "
                     f"Please save manually using save_categories().",
                 )
-        elif auto_save and not self.config_file:
-            logger.warning(
-                f"Category '{category.name}' added but no config file set. "
-                f"Changes will be lost unless manually saved using save_categories(file_path).",
-            )
 
-    def remove_category(self, name: str, auto_save: bool = True) -> None:
+    def remove_category(self, name: str) -> None:
         """Remove a category."""
         if name in self.categories:
             logger.info(f"Removing category '{name}'")
             del self.categories[name]
 
             # Auto-save if config file is set
-            if auto_save and self.config_file:
+            if self.config_file:
                 try:
                     self.save_categories()
                 except Exception as e:
@@ -77,11 +72,6 @@ class CategoryManager:
                         f"Failed to auto-save categories after removing '{name}': {e}. "
                         f"Please save manually using save_categories().",
                     )
-            elif auto_save and not self.config_file:
-                logger.warning(
-                    f"Category '{name}' removed but no config file set. "
-                    f"Changes will be lost unless manually saved using save_categories(file_path).",
-                )
         else:
             logger.warning(f"Category '{name}' does not exist, cannot remove")
 

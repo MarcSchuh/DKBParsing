@@ -150,10 +150,6 @@ def main():
         name, display_name, search_string = args.add_category
         dkb_parser.add_category(name, display_name, [search_string])
         logger.info(f"Added category '{name}' with search string '{search_string}'")
-
-        # Auto-save to config_file
-        dkb_parser.save_config(category_file)
-        logger.info(f"Configuration saved to {category_file}")
         return
 
     # Handle manual assignments
