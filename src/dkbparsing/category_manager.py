@@ -18,10 +18,10 @@ class CategoryManager:
     def __init__(
         self,
         category_file: Path,
-        manual_assignments_file: Path | None = None,
+        manual_assignments_file: Path,
     ):
         self.categories: dict[str, Category] = {}
-        self.config_file = category_file
+        self.category_file = category_file
         self.manual_assignments_file = manual_assignments_file
         self.manual_assignments: list[dict[str, str | float]] = []
 
@@ -34,12 +34,14 @@ class CategoryManager:
                 f"Category config file {category_file} does not exist, will be created on first save",
             )
 
-        if manual_assignments_file and manual_assignments_file.exists():
+        if manual_assignments_file.exists():
             logger.info(f"Loading manual assignments from {manual_assignments_file}")
             self.load_manual_assignments()
             logger.info(f"Loaded {len(self.manual_assignments)} manual assignments")
         else:
-            logger.debug("No manual assignments file provided or file does not exist")
+            logger.debug(
+                f"Manual assignments file {manual_assignments_file} does not exist, will be created on first save",
+            )
 
     def add_category(self, category: Category) -> None:
         """Add a new category."""
@@ -248,11 +250,10 @@ class CategoryManager:
 
         return parsed_transactions
 
-    def save_categories(self, file_path: Path | None = None) -> None:
+    def save_categories(self) -> None:
         """Save categories to JSON file."""
-        save_path = file_path or self.config_file
 
-        logger.info(f"Saving {len(self.categories)} categories to {save_path}")
+        logger.info(f"Saving {len(self.categories)} categories to {self.category_file}")
         data = {}
         for name, category in self.categories.items():
             data[name] = {
@@ -262,23 +263,18 @@ class CategoryManager:
             }
 
         try:
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(save_path, "w", encoding="utf-8") as f:
+            self.category_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.category_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Successfully saved categories to {save_path}")
+            logger.info(f"Successfully saved categories to {self.category_file}")
         except Exception as e:
-            logger.error(f"Failed to save categories to {save_path}: {e}")
+            logger.error(f"Failed to save categories to {self.category_file}: {e}")
             raise
 
-    def load_categories(self, file_path: Path | None = None) -> None:
+    def load_categories(self) -> None:
         """Load categories from JSON file."""
-        load_path = file_path or self.config_file
-        if not load_path.exists():
-            logger.debug(f"Category file {load_path} does not exist, skipping load")
-            return
-
         try:
-            with open(load_path, encoding="utf-8") as f:
+            with open(self.category_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             self.categories = {}
@@ -290,56 +286,55 @@ class CategoryManager:
                     regex_patterns=category_data.get("regex_patterns", []),
                 )
                 self.categories[name] = category
-            logger.debug(f"Loaded {len(self.categories)} categories from {load_path}")
+            logger.debug(
+                f"Loaded {len(self.categories)} categories from {self.category_file}",
+            )
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in category file {load_path}: {e}")
+            logger.error(f"Invalid JSON in category file {self.category_file}: {e}")
             raise
         except Exception as e:
-            logger.error(f"Failed to load categories from {load_path}: {e}")
+            logger.error(f"Failed to load categories from {self.category_file}: {e}")
             raise
 
-    def load_manual_assignments(self, file_path: Path | None = None) -> None:
+    def load_manual_assignments(self) -> None:
         """Load manual assignments from JSON file."""
-        load_path = file_path or self.manual_assignments_file
-        if not load_path or not load_path.exists():
-            logger.debug(
-                f"Manual assignments file {load_path} does not exist, skipping load",
-            )
-            return
 
         try:
-            with open(load_path, encoding="utf-8") as f:
+            with open(self.manual_assignments_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             self.manual_assignments = data.get("manual_assignments", [])
             logger.debug(
-                f"Loaded {len(self.manual_assignments)} manual assignments from {load_path}",
+                f"Loaded {len(self.manual_assignments)} manual assignments from {self.manual_assignments_file}",
             )
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in manual assignments file {load_path}: {e}")
+            logger.error(
+                f"Invalid JSON in manual assignments file {self.manual_assignments_file}: {e}",
+            )
             raise
         except Exception as e:
-            logger.error(f"Failed to load manual assignments from {load_path}: {e}")
+            logger.error(
+                f"Failed to load manual assignments from {self.manual_assignments_file}: {e}",
+            )
             raise
 
-    def save_manual_assignments(self, file_path: Path | None = None) -> None:
+    def save_manual_assignments(self) -> None:
         """Save manual assignments to JSON file."""
-        save_path = file_path or self.manual_assignments_file
-        if not save_path:
-            logger.error("No file path provided for saving manual assignments")
-            raise ValueError("No file path provided for saving manual assignments")
-
         logger.info(
-            f"Saving {len(self.manual_assignments)} manual assignments to {save_path}",
+            f"Saving {len(self.manual_assignments)} manual assignments to {self.manual_assignments_file}",
         )
         data = {"manual_assignments": self.manual_assignments}
         try:
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(save_path, "w", encoding="utf-8") as f:
+            self.manual_assignments_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.manual_assignments_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Successfully saved manual assignments to {save_path}")
+            logger.info(
+                f"Successfully saved manual assignments to {self.manual_assignments_file}",
+            )
         except Exception as e:
-            logger.error(f"Failed to save manual assignments to {save_path}: {e}")
+            logger.error(
+                f"Failed to save manual assignments to {self.manual_assignments_file}: {e}",
+            )
             raise
 
     def add_manual_assignment(
@@ -377,6 +372,7 @@ class CategoryManager:
         logger.info(
             f"Added manual assignment: {date} {recipient[:30]}... -> {category_name}",
         )
+        self.save_manual_assignments()
 
     def remove_manual_assignment(self, date: str, recipient: str, purpose: str) -> None:
         """Remove a manual assignment."""
@@ -393,6 +389,7 @@ class CategoryManager:
 
         if len(self.manual_assignments) < initial_count:
             logger.info(f"Removed manual assignment: {date} {recipient[:30]}...")
+            self.save_manual_assignments()
         else:
             logger.warning(f"Manual assignment not found: {date} {recipient[:30]}...")
 

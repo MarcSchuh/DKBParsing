@@ -143,10 +143,14 @@ def main():
         )
         sys.exit(1)
 
+    if not manual_assignments_file_str:
+        logger.error(
+            "Error: manual_assignments_file must be set in CLI config file",
+        )
+        sys.exit(1)
+
     category_file = Path(category_file_str)
-    manual_assignments_file = (
-        Path(manual_assignments_file_str) if manual_assignments_file_str else None
-    )
+    manual_assignments_file = Path(manual_assignments_file_str)
 
     # Initialize parser
     dkb_parser = DKBParser(category_file, manual_assignments_file)
@@ -169,19 +173,9 @@ def main():
             )
             sys.exit(1)
 
-        if not manual_assignments_file:
-            logger.error(
-                "Error: manual_assignments_file must be set in CLI config for --add-manual",
-            )
-            sys.exit(1)
-
         date, recipient, purpose, category = args.add_manual
         dkb_parser.add_manual_assignment(date, recipient, purpose, category)
         logger.info(f"Added manual assignment: {date} {recipient} -> {category}")
-
-        # Auto-save to manual_assignments_file
-        dkb_parser.save_manual_assignments(manual_assignments_file)
-        logger.info(f"Manual assignments saved to {manual_assignments_file}")
         return
 
     # Only parse CSV if csv_file is provided
