@@ -90,12 +90,6 @@ def main():
     )
 
     parser.add_argument(
-        "--output",
-        choices=["excel", "summary", "household", "both"],
-        help="Output format (overrides CLI config)",
-    )
-
-    parser.add_argument(
         "--manual-assignments",
         help="JSON file with manual transaction assignments (overrides CLI config)",
     )
@@ -156,7 +150,7 @@ def main():
         "manual_assignments_file",
     )
     output_template = cli_config.get("output_template")
-    output_format = args.output or cli_config.get("output_format", "excel")
+    output_format = cli_config.get("output_format", "excel")
 
     # Initialize parser
     dkb_parser = DKBParser(config_file, manual_assignments_file)
