@@ -96,11 +96,6 @@ def main():
     )
 
     parser.add_argument(
-        "--template",
-        help="Template file for household output format. Template should contain category display names directly, one per line. (overrides CLI config)",
-    )
-
-    parser.add_argument(
         "--manual-assignments",
         help="JSON file with manual transaction assignments (overrides CLI config)",
     )
@@ -160,7 +155,7 @@ def main():
     manual_assignments_file = args.manual_assignments or cli_config.get(
         "manual_assignments_file",
     )
-    output_template = args.template or cli_config.get("output_template")
+    output_template = cli_config.get("output_template")
     output_format = args.output or cli_config.get("output_format", "excel")
 
     # Initialize parser
@@ -260,7 +255,7 @@ def main():
     if output_format in ["household", "both"]:
         if not output_template:
             logger.error(
-                "Error: --template required for household output (or set in CLI config)",
+                "Error: output_template required for household output (set in CLI config)",
             )
             sys.exit(1)
 
