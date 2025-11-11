@@ -1,15 +1,22 @@
 # DKB Parsing
 
-A clean, configurable parser for DKB account statements that allows you to categorize transactions and generate Excel-compatible output.
+A Python tool for parsing and categorizing DKB (Deutsche Kreditbank) account statement CSV exports.
+Automatically categorizes transactions using search strings and regex patterns, supports manual assignments, and generates Excel-compatible output for easy integration into your budget spreadsheets.
 
-## Installation
+## Getting Ready
 
-[uv](https://github.com/astral-sh/uv) is a fast Python package installer and resolver:
+### Prerequisites
+
+This project uses [uv](https://github.com/astral-sh/uv), a fast Python package installer and resolver.
+
+**Install uv** (if not already installed):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Installation
 
 ```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
 # Sync dependencies and install the package (includes dev dependencies)
 uv sync
 
@@ -19,57 +26,129 @@ uv sync --no-dev
 
 This will create a virtual environment and install all dependencies from `pyproject.toml`.
 
-### Updating
+## Development
 
-```bash
-uv lock
-```
+### Pre-commit Hooks
 
+The project uses pre-commit hooks to ensure code quality before commits. These hooks run:
+- **Ruff** for linting and formatting
+- **MyPy** for type checking
+- Various file checks (YAML, JSON, TOML validation, trailing whitespace, etc.)
 
-### Testing
-```bash
-python -m pytest tests/
-```
-
-### Code Quality Tools
-**Pre-commit Hooks (Recommended):**
-
-To automatically run ruff and other checks before each commit:
-
+**Setup:**
 ```bash
 # Install pre-commit hooks
-pre-commit install
+uv run pre-commit install
 
 # Manually run all hooks
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
-## Quick Start
+### Testing
 
-### 1. Typical usage
-
+Run the test suite with pytest:
 ```bash
-# Basic parsing
-
-python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json  --add-category "faz" "FAZ" "Frankfurter Allgemeine"
-
-python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json  --add-manual 01.01.99 "Parkhaus GmbH 123" "VISA Debitkartenumsatz" "car-expenses"
-
-python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json --start-date 01.07.25 --end-date 31.07.25
+uv run pytest tests/ -v
 ```
 
-## Household Budget Integration
+Run tests with coverage:
+```bash
+uv run pytest tests/ --cov=src/dkbparsing --cov-report=html
+```
 
-The parser supports direct integration with household budget spreadsheets:
+## Maintenance
 
-### 1. Create a Template File
+### Updating Dependencies
 
-Create a text file with your budget categories in the desired order:
+To update all dependencies to their latest compatible versions:
+```bash
+uv lock --upgrade
+uv sync
+```
 
+This will update the `uv.lock` file and sync your environment with the new versions.
+
+## Usage
+
+### Configuration
+
+Create a CLI configuration file (JSON) that specifies:
+- `category_config`: Path to your categories JSON file
+- `manual_assignments_file`: Path to your manual assignments JSON file
+- `output_template`: (Optional) Path to household budget template file
+- `output_format`: Output format - `"excel"`, `"summary"`, `"household"`, or `"both"`
+
+Example `cli_config.json`:
+```json
+{
+  "category_config": "my_categories.json",
+  "manual_assignments_file": "manual_assignments.json",
+  "output_template": "household_template.txt",
+  "output_format": "household"
+}
+```
+
+### Category Configuration
+
+Categories are defined in a JSON file with search strings and optional regex patterns:
+
+```json
+{
+  "lebensmittel": {
+    "display_name": "Lebensmittel",
+    "search_strings": ["REWE", "EDEKA"],
+    "regex_patterns": [],
+    "expected_max_amount": 300.0
+  }
+}
+```
+
+### Basic Usage
+
+**Parse a CSV file:**
+```bash
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/cli_config.json
+```
+
+**Filter by date range:**
+```bash
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/cli_config.json \
+  --start-date 01.07.25 --end-date 31.07.25
+```
+
+**Add a new category:**
+```bash
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/cli_config.json \
+  --add-category "faz" "FAZ" "Frankfurter Allgemeine"
+```
+
+**Add a manual assignment:**
+```bash
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/cli_config.json \
+  --add-manual 01.01.99 "Parkhaus GmbH 123" "VISA Debitkartenumsatz" "car-expenses"
+```
+
+### Output Formats
+
+**Excel Format** (`output_format: "excel"`):
+Generates category totals and uncategorized transactions in a format ready to copy-paste into Excel.
+
+**Summary Format** (`output_format: "summary"`):
+Provides a detailed summary including:
+- Total transactions processed
+- Categorized vs uncategorized counts
+- Total income and expenses
+- Net balance
+- Category totals
+- Warnings for categories exceeding expected maximum amounts
+
+**Household Format** (`output_format: "household"`):
+Generates output based on a template file. The template should contain category display names (one per line), and the output will match the template order with amounts. Empty lines in the template are preserved.
+
+Example template (`household_template.txt`):
 ```
 Einkommen
 Finanzamt
-
 
 
 
@@ -79,23 +158,10 @@ Kleidung
 Essen
 ```
 
-**Notes:**
-- Empty lines in the template are preserved in the output
-- Category names should match the `display_name` from your category configuration
-- For income, use any line containing "einkommen" (case-insensitive) - it will automatically map to total income
-- Matching is case-insensitive, so "lebensmittel" matches "Lebensmittel"
-
-### 2. Generate Household Output
-
-```bash
-python -m dkbparsing.cli export.csv --output household --template my_template.txt
-```
-
 This generates output like:
 ```
 5312,5
 12,30
-
 
 
 
@@ -106,25 +172,14 @@ This generates output like:
 
 You can copy this directly into your Excel spreadsheet!
 
-## Examples
+### Examples
 
 See the `examples/` directory for:
-- Sample configuration file
-- Example usage code
-- Configuration templates
-- Household budget integration examples
-
-## Contributing
-
-This library is designed to be easily extensible. You can:
-- Add new output formats by extending the formatter classes
-- Add new categorization methods by extending the category manager
-- Add new CSV formats by extending the CSV parser
+- Sample category configuration (`categories.json`)
+- Example CLI configuration (`cli_config.json`)
+- Household budget template (`household_template.txt`)
+- Manual assignments example (`manual_assignments.json`)
 
 ## License
 
 See LICENSE file for details.
-
-# Ideas
-- Pipeline
-- Readme
