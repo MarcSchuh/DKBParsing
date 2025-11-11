@@ -17,6 +17,7 @@ from dkbparsing.output_formatter import (
     ExcelFormatter,
     HouseholdFormatter,
     SummaryFormatter,
+    TransactionHiddenError,
 )
 
 
@@ -544,6 +545,132 @@ class TestHouseholdFormatter:
             assert formatter._format_amount(100.50) == "100,5"
             assert formatter._format_amount(-50.25) == "-50,25"
             assert formatter._format_amount(1234.56) == "1234,56"
+        finally:
+            Path(template_path).unlink()
+
+    def test_format_household_output_raises_error_when_category_missing_in_template(
+        self,
+    ):
+        """Test that TransactionHiddenError is raised when a category with transactions is not in template."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+            f.write("Groceries\n")
+            f.write("Salary\n")
+            # Missing "Rent" category
+            template_path = f.name
+
+        try:
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={
+                    "Groceries": -50.25,
+                    "Salary": 2000.00,
+                    "Rent": -800.00,  # This category is not in template
+                },
+                total_income=2000.00,
+                total_expenses=-850.25,
+            )
+
+            formatter = HouseholdFormatter(template_path)
+            with pytest.raises(TransactionHiddenError) as exc_info:
+                formatter.format_household_output(result)
+
+            assert "Rent" in str(exc_info.value)
+            assert "Categories with transactions are not in the output template" in str(
+                exc_info.value,
+            )
+        finally:
+            Path(template_path).unlink()
+
+    def test_format_household_output_raises_error_with_multiple_missing_categories(
+        self,
+    ):
+        """Test that TransactionHiddenError lists all missing categories."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+            f.write("Groceries\n")
+            # Missing "Rent" and "Utilities" categories
+            template_path = f.name
+
+        try:
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={
+                    "Groceries": -50.25,
+                    "Rent": -800.00,  # Not in template
+                    "Utilities": -100.00,  # Not in template
+                },
+                total_income=0.0,
+                total_expenses=-950.25,
+            )
+
+            formatter = HouseholdFormatter(template_path)
+            with pytest.raises(TransactionHiddenError) as exc_info:
+                formatter.format_household_output(result)
+
+            error_message = str(exc_info.value)
+            assert "Rent" in error_message
+            assert "Utilities" in error_message
+        finally:
+            Path(template_path).unlink()
+
+    def test_format_household_output_ignores_zero_amount_categories(self):
+        """Test that categories with zero amounts are ignored in validation."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+            f.write("Groceries\n")
+            f.write("Salary\n")
+            # "ZeroCategory" is not in template but has 0 amount, so should not raise error
+            template_path = f.name
+
+        try:
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={
+                    "Groceries": -50.25,
+                    "Salary": 2000.00,
+                    "ZeroCategory": 0.0,  # Zero amount, should be ignored
+                },
+                total_income=2000.00,
+                total_expenses=-50.25,
+            )
+
+            formatter = HouseholdFormatter(template_path)
+            # Should not raise error because ZeroCategory has 0 amount
+            output = formatter.format_household_output(result)
+
+            lines = output.split("\n")
+            assert lines[0] == "-50,25"
+            assert lines[1] == "2000,0"
+        finally:
+            Path(template_path).unlink()
+
+    def test_format_household_output_case_insensitive_validation(self):
+        """Test that validation is case-insensitive."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+            f.write("groceries\n")  # lowercase in template
+            f.write("SALARY\n")  # uppercase in template
+            template_path = f.name
+
+        try:
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={
+                    "Groceries": -50.25,  # Title case in result
+                    "Salary": 2000.00,  # Title case in result
+                },
+                total_income=2000.00,
+                total_expenses=-50.25,
+            )
+
+            formatter = HouseholdFormatter(template_path)
+            # Should not raise error because case-insensitive matching works
+            output = formatter.format_household_output(result)
+
+            lines = output.split("\n")
+            assert lines[0] == "-50,25"
+            assert lines[1] == "2000,0"
         finally:
             Path(template_path).unlink()
 

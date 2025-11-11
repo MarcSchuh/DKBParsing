@@ -9,6 +9,10 @@ from .models import ParsingResult
 logger = logging.getLogger(__name__)
 
 
+class TransactionHiddenError(Exception):
+    """Exception raised when a category with transactions is not in the output template."""
+
+
 class ExcelFormatter:
     """Formats parsing results for Excel output."""
 
@@ -123,6 +127,9 @@ class HouseholdFormatter:
         Args:
             result: ParsingResult object
             category_mapping: Ignored (kept for backwards compatibility)
+
+        Raises:
+            TransactionHiddenError: If a category with transactions is not in the template
         """
         # Create mapping from category display names to amounts (case-insensitive lookup)
         category_amounts = {}
@@ -130,6 +137,28 @@ class HouseholdFormatter:
         for category_name, amount in result.category_totals.items():
             category_amounts[category_name] = amount
             category_lookup[category_name.lower()] = category_name
+
+        # Get categories with non-zero amounts (transactions)
+        categories_with_transactions = {
+            name for name, amount in category_amounts.items() if amount != 0
+        }
+
+        # Create set of template category names (case-insensitive)
+        template_categories_lower = {
+            line.strip().lower() for line in self.template_lines if line.strip()
+        }
+
+        # Check if all categories with transactions are in the template
+        missing_categories = []
+        for category_name in categories_with_transactions:
+            if category_name.lower() not in template_categories_lower:
+                missing_categories.append(category_name)
+
+        if missing_categories:
+            raise TransactionHiddenError(
+                f"Categories with transactions are not in the output template: {', '.join(missing_categories)}. "
+                f"Template categories: {[line.strip() for line in self.template_lines if line.strip()]}",
+            )
 
         # Debug: Print available categories and amounts
         logger.debug(f"Available category amounts: {category_amounts}")
