@@ -98,12 +98,7 @@ def main():
         "--add-manual",
         nargs=4,
         metavar=("DATE", "RECIPIENT", "PURPOSE", "CATEGORY"),
-        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data.",
-    )
-
-    parser.add_argument(
-        "--save-manual",
-        help="Save manual assignments to file (if not specified, uses --manual-assignments if provided)",
+        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data. Requires --manual-assignments or manual_assignments_file in CLI config.",
     )
 
     parser.add_argument(
@@ -183,19 +178,19 @@ def main():
             )
             sys.exit(1)
 
+        if not manual_assignments_file:
+            logger.error(
+                "Error: --manual-assignments or manual_assignments_file in CLI config is required for --add-manual",
+            )
+            sys.exit(1)
+
         date, recipient, purpose, category = args.add_manual
         dkb_parser.add_manual_assignment(date, recipient, purpose, category)
         logger.info(f"Added manual assignment: {date} {recipient} -> {category}")
 
-        # Auto-save: use --save-manual if provided, otherwise use --manual-assignments if provided
-        save_path = args.save_manual or manual_assignments_file
-        if save_path:
-            dkb_parser.save_manual_assignments(save_path)
-            logger.info(f"Manual assignments saved to {save_path}")
-        else:
-            logger.warning(
-                "No manual assignments file specified. Use --manual-assignments or --save-manual to save.",
-            )
+        # Auto-save to manual_assignments_file
+        dkb_parser.save_manual_assignments(manual_assignments_file)
+        logger.info(f"Manual assignments saved to {manual_assignments_file}")
         return
 
     # Only parse CSV if csv_file is provided
