@@ -97,15 +97,10 @@ def main():
     )
 
     parser.add_argument(
-        "--save-config",
-        help="Save current configuration to file (if not specified, uses --config if provided)",
-    )
-
-    parser.add_argument(
         "--add-category",
         nargs=3,
         metavar=("NAME", "DISPLAY_NAME", "SEARCH_STRING"),
-        help="Add a new category",
+        help="Add a new category. Requires --config or category_config in CLI config.",
     )
 
     parser.add_argument(
@@ -149,15 +144,15 @@ def main():
         dkb_parser.add_category(name, display_name, [search_string])
         logger.info(f"Added category '{name}' with search string '{search_string}'")
 
-        # Auto-save: use --save-config if provided, otherwise use --config if provided
-        save_path = args.save_config or config_file
-        if save_path:
-            dkb_parser.save_config(save_path)
-            logger.info(f"Configuration saved to {save_path}")
-        else:
-            logger.warning(
-                "No config file specified. Use --config or --save-config to save the category.",
+        if not config_file:
+            logger.error(
+                "Error: --config or category_config in CLI config is required for --add-category",
             )
+            sys.exit(1)
+
+        # Auto-save to config_file
+        dkb_parser.save_config(config_file)
+        logger.info(f"Configuration saved to {config_file}")
         return
 
     # Handle manual assignments
@@ -255,11 +250,6 @@ def main():
         # Output to stdout for user to copy/paste
         print(household_output)  # noqa: T201
         outputs_printed.append("household")
-
-    # Save configuration if requested
-    if args.save_config:
-        dkb_parser.save_config(args.save_config)
-        logger.info(f"Configuration saved to {args.save_config}")
 
 
 if __name__ == "__main__":
