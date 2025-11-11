@@ -1,0 +1,39 @@
+{
+  "lebensmittel": {
+    "display_name": "Lebensmittel",
+    "search_strings": [
+      "REWE",
+      "EDEKA"
+    ],
+    "regex_patterns": [],
+    "expected_max_amount": 300.0
+  },
+  "tanken": {
+    "display_name": "Tanken",
+    "search_strings": [
+      "SHELL",
+      "TOTAL"
+    ],
+    "regex_patterns": [],
+    "expected_max_amount": 150.0
+  },
+  "miete": {
+    "display_name": "Miete",
+    "search_strings": [
+      "Miete"
+    ],
+    "regex_patterns": []
+  },
+  "essen_bestellen": {
+    "display_name": "Essen bestellen",
+    "search_strings": [
+      "Lieferando",
+      "Takeaway",
+      "PayPal.*Restaurant",
+      "McDonald's"
+    ],
+    "regex_patterns": [
+      "PayPal.*Restaurant.*PP\\.7905\\.PP"
+    ]
+  }
+}

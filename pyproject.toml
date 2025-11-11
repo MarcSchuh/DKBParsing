@@ -4,10 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Marc Schuh", email = "marc.schuh@tngtech.com" }
+    { name = "Marc Schuh", email = "dkbparsing@marc-schuh.de" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pandas>=2.0.0",
+]
 
 [project.scripts]
 dkbparsing = "dkbparsing:main"

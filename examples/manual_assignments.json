@@ -1,0 +1,16 @@
+{
+  "manual_assignments": [
+    {
+      "date": "01.08.22",
+      "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A",
+      "purpose": "123",
+      "category": "Hardware"
+    },
+    {
+      "date": "31.07.22",
+      "recipient": "AMAZON PAYMENTS EUROPE S.C.A.",
+      "purpose": "303-",
+      "category": "Hardware"
+    }
+  ]
+}
