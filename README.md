@@ -126,6 +126,5 @@ This library is designed to be easily extensible. You can:
 See LICENSE file for details.
 
 # Ideas
-- Maximum a
 - Pipeline
 - Readme
