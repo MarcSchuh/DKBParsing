@@ -39,11 +39,11 @@ pre-commit run --all-files
 ```bash
 # Basic parsing
 
-python -m dkbparsing.cli /path/to/accounting.csv --cli-config /path/to/config.json  --add-category "faz" "FAZ" "Frankfurter Allgemeine"
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json  --add-category "faz" "FAZ" "Frankfurter Allgemeine"
 
-python -m dkbparsing.cli /path/to/accounting.csv --cli-config /path/to/config.json  --add-manual 01.01.99 "Parkhaus GmbH 123" "VISA Debitkartenumsatz" "car-expenses"
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json  --add-manual 01.01.99 "Parkhaus GmbH 123" "VISA Debitkartenumsatz" "car-expenses"
 
-python -m dkbparsing.cli /path/to/accounting.csv --cli-config /path/to/config.json --start-date 01.07.25 --end-date 31.07.25
+python -m dkbparsing.cli /path/to/accounting.csv --config /path/to/config.json --start-date 01.07.25 --end-date 31.07.25
 ```
 
 ## Household Budget Integration

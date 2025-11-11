@@ -14,7 +14,7 @@ from .parser import DKBParser
 logger = logging.getLogger(__name__)
 
 
-def load_cli_config(config_file: str | None) -> dict:
+def load_config(config_file: str | None) -> dict:
     """Load CLI configuration from JSON file."""
     if not config_file:
         return {}
@@ -37,7 +37,7 @@ def load_cli_config(config_file: str | None) -> dict:
         return {}
 
 
-def save_cli_config(config_file: str, config: dict) -> None:
+def save_config(config_file: str, config: dict) -> None:
     """Save CLI configuration to JSON file."""
     try:
         config_path = Path(config_file)
@@ -64,7 +64,7 @@ def main():
     )
 
     parser.add_argument(
-        "--cli-config",
+        "--config",
         help="Path to CLI configuration file (contains defaults for config, manual-assignments, template, output)",
     )
 
@@ -72,11 +72,6 @@ def main():
         "csv_file",
         nargs="?",
         help="Path to the DKB CSV file (optional if only managing categories/assignments)",
-    )
-
-    parser.add_argument(
-        "--config",
-        help="Path to category configuration file (overrides CLI config)",
     )
 
     parser.add_argument(
@@ -93,14 +88,14 @@ def main():
         "--add-manual",
         nargs=4,
         metavar=("DATE", "RECIPIENT", "PURPOSE", "CATEGORY"),
-        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data. Requires --cli-config with manual_assignments_file set.",
+        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data. Requires --config with manual_assignments_file set.",
     )
 
     parser.add_argument(
         "--add-category",
         nargs=3,
         metavar=("NAME", "DISPLAY_NAME", "SEARCH_STRING"),
-        help="Add a new category. Requires --config or category_config in CLI config.",
+        help="Add a new category. Requires --config with category_config set.",
     )
 
     parser.add_argument(
@@ -127,32 +122,38 @@ def main():
     )
 
     # Load CLI config if provided
-    cli_config = load_cli_config(args.cli_config) if args.cli_config else {}
+    config = load_config(args.config) if args.config else {}
 
-    # Merge CLI config with command-line arguments (CLI args take precedence)
-    config_file = args.config or cli_config.get("category_config")
-    manual_assignments_file = cli_config.get("manual_assignments_file")
-    output_template = cli_config.get("output_template")
-    output_format = cli_config.get("output_format", "excel")
+    # Load configuration from CLI config
+    category_file = config.get("category_config")
+    manual_assignments_file = config.get("manual_assignments_file")
+    output_template = config.get("output_template")
+    output_format = config.get("output_format", "excel")
 
     # Initialize parser
-    dkb_parser = DKBParser(config_file, manual_assignments_file)
+    dkb_parser = DKBParser(category_file, manual_assignments_file)
 
     # Handle category management
     if args.add_category:
+        if not args.config:
+            logger.error(
+                "Error: --config is required for --add-category",
+            )
+            sys.exit(1)
+
+        if not category_file:
+            logger.error(
+                "Error: category_config must be set in CLI config for --add-category",
+            )
+            sys.exit(1)
+
         name, display_name, search_string = args.add_category
         dkb_parser.add_category(name, display_name, [search_string])
         logger.info(f"Added category '{name}' with search string '{search_string}'")
 
-        if not config_file:
-            logger.error(
-                "Error: --config or category_config in CLI config is required for --add-category",
-            )
-            sys.exit(1)
-
         # Auto-save to config_file
-        dkb_parser.save_config(config_file)
-        logger.info(f"Configuration saved to {config_file}")
+        dkb_parser.save_config(category_file)
+        logger.info(f"Configuration saved to {category_file}")
         return
 
     # Handle manual assignments
@@ -166,9 +167,9 @@ def main():
             )
             sys.exit(1)
 
-        if not args.cli_config:
+        if not args.config:
             logger.error(
-                "Error: --cli-config is required for --add-manual",
+                "Error: --config is required for --add-manual",
             )
             sys.exit(1)
 
