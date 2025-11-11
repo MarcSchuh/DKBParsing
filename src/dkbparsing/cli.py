@@ -98,20 +98,6 @@ def main():
         help="Add a new category. Requires --config with category_config set.",
     )
 
-    parser.add_argument(
-        "--add-search-string",
-        nargs=2,
-        metavar=("CATEGORY_NAME", "SEARCH_STRING"),
-        help="Add a search string to an existing category",
-    )
-
-    parser.add_argument(
-        "--remove-search-string",
-        nargs=2,
-        metavar=("CATEGORY_NAME", "SEARCH_STRING"),
-        help="Remove a search string from a category",
-    )
-
     args = parser.parse_args()
 
     # Configure logging

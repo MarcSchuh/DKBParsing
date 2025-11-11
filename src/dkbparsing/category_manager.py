@@ -126,67 +126,6 @@ class CategoryManager:
             f"Removed search string '{search_string}' from category '{category_name}'",
         )
 
-    def add_regex_pattern(self, category_name: str, pattern: str) -> None:
-        """Add a regex pattern to a category."""
-        if category_name not in self.categories:
-            logger.warning(
-                f"Category '{category_name}' does not exist. Cannot add regex pattern. "
-                f"Available categories: {list(self.categories.keys())}",
-            )
-            return
-
-        category = self.categories[category_name]
-        if category.regex_patterns is None:
-            object.__setattr__(category, "regex_patterns", [])
-
-        # Ensure regex_patterns is not None for type checking
-        patterns = category.regex_patterns
-        if patterns is None:
-            patterns = []
-            object.__setattr__(category, "regex_patterns", patterns)
-
-        if pattern in patterns:
-            logger.debug(f"Regex pattern already exists in category '{category_name}'")
-            return
-
-        # Validate regex pattern
-        try:
-            re.compile(pattern)
-            patterns.append(pattern)
-            logger.info(f"Added regex pattern to category '{category_name}'")
-        except re.error as e:
-            logger.error(f"Invalid regex pattern '{pattern}': {e}")
-            raise ValueError(f"Invalid regex pattern: {e}") from e
-
-    def remove_regex_pattern(self, category_name: str, pattern: str) -> None:
-        """Remove a regex pattern from a category."""
-        if category_name not in self.categories:
-            logger.warning(
-                f"Category '{category_name}' does not exist. Cannot remove regex pattern. "
-                f"Available categories: {list(self.categories.keys())}",
-            )
-            return
-
-        category = self.categories[category_name]
-        if category.regex_patterns is None:
-            object.__setattr__(category, "regex_patterns", [])
-
-        # Ensure regex_patterns is not None for type checking
-        patterns = category.regex_patterns
-        if patterns is None:
-            patterns = []
-            object.__setattr__(category, "regex_patterns", patterns)
-
-        if pattern not in patterns:
-            logger.warning(
-                f"Regex pattern does not exist in category '{category_name}'. "
-                f"Available patterns: {patterns}",
-            )
-            return
-
-        patterns.remove(pattern)
-        logger.info(f"Removed regex pattern from category '{category_name}'")
-
     def categorize_transaction(
         self,
         transaction: Transaction,
