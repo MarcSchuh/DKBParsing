@@ -209,13 +209,16 @@ class CategoryManager:
         """Save categories to JSON file."""
 
         logger.info(f"Saving {len(self.categories)} categories to {self.category_file}")
-        data = {}
+        data: dict[str, dict[str, str | list[str] | float | None]] = {}
         for name, category in self.categories.items():
-            data[name] = {
+            category_data: dict[str, str | list[str] | float | None] = {
                 "display_name": category.display_name,
                 "search_strings": category.search_strings,
                 "regex_patterns": category.regex_patterns,
             }
+            if category.expected_max_amount is not None:
+                category_data["expected_max_amount"] = category.expected_max_amount
+            data[name] = category_data
 
         try:
             self.category_file.parent.mkdir(parents=True, exist_ok=True)
@@ -241,6 +244,7 @@ class CategoryManager:
                     display_name=category_data.get("display_name", name),
                     search_strings=category_data.get("search_strings", []),
                     regex_patterns=category_data.get("regex_patterns", []),
+                    expected_max_amount=category_data.get("expected_max_amount"),
                 )
                 self.categories[name] = category
             logger.debug(

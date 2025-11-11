@@ -135,7 +135,36 @@ class DKBParser:
 
     def format_summary(self, result: ParsingResult) -> str:
         """Format summary information."""
-        return self.summary_formatter.format_summary(result)
+        warnings = self._check_expected_max_amounts(result)
+        return self.summary_formatter.format_summary(result, warnings)
+
+    def _check_expected_max_amounts(self, result: ParsingResult) -> list[str]:
+        """
+        Check if any categories exceed their expected maximum amounts.
+
+        Returns:
+            List of warning messages for categories that exceed expected maximum
+        """
+        warnings = []
+
+        for category_display_name, total_amount in result.category_totals.items():
+            # Find the category by display_name
+            category = None
+            for cat in self.category_manager.categories.values():
+                if cat.display_name == category_display_name:
+                    category = cat
+                    break
+
+            if category and category.expected_max_amount is not None:
+                # Use absolute value for comparison (for expenses, total_amount is negative)
+                abs_total = abs(total_amount)
+                if abs_total > category.expected_max_amount:
+                    warnings.append(
+                        f"Ungewöhnlicher Umsatz in '{category_display_name}': "
+                        f"{abs_total:.2f} € (erwartet max. {category.expected_max_amount:.2f} €)",
+                    )
+
+        return warnings
 
     def format_household(self, result: ParsingResult, template_file: str) -> str:
         """Format output for household budget integration.

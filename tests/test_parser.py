@@ -624,7 +624,7 @@ class TestDKBParserFormatting:
             parser.excel_formatter.format_for_excel.assert_called_once_with(mock_result)
 
     def test_format_summary(self):
-        """Test that format_summary delegates to SummaryFormatter."""
+        """Test that format_summary delegates to SummaryFormatter with warnings."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -640,10 +640,15 @@ class TestDKBParserFormatting:
             )
 
             parser.summary_formatter.format_summary = Mock(return_value="summary")
+            parser._check_expected_max_amounts = Mock(return_value=[])
 
             result = parser.format_summary(mock_result)
 
-            parser.summary_formatter.format_summary.assert_called_once_with(mock_result)
+            parser._check_expected_max_amounts.assert_called_once_with(mock_result)
+            parser.summary_formatter.format_summary.assert_called_once_with(
+                mock_result,
+                [],
+            )
             assert result == "summary"
 
     def test_format_household(self):
@@ -676,6 +681,204 @@ class TestDKBParserFormatting:
                     mock_result,
                 )
                 assert result == "household"
+
+
+class TestDKBParserExpectedMaxAmount:
+    """Tests for expected maximum amount validation."""
+
+    def test_check_expected_max_amounts_exceeds_limit(self):
+        """Test that warnings are generated when category exceeds expected max amount."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create category with expected_max_amount
+            category = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+                expected_max_amount=100.00,
+            )
+            parser.category_manager.add_category(category)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={"Groceries": -150.00},  # Exceeds 100.00
+                total_income=0.0,
+                total_expenses=-150.00,
+            )
+
+            warnings = parser._check_expected_max_amounts(result)
+
+            assert len(warnings) == 1
+            assert "Groceries" in warnings[0]
+            assert "150.00" in warnings[0]
+            assert "100.00" in warnings[0]
+
+    def test_check_expected_max_amounts_within_limit(self):
+        """Test that no warnings are generated when category is within expected max amount."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create category with expected_max_amount
+            category = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+                expected_max_amount=100.00,
+            )
+            parser.category_manager.add_category(category)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={"Groceries": -50.00},  # Within 100.00
+                total_income=0.0,
+                total_expenses=-50.00,
+            )
+
+            warnings = parser._check_expected_max_amounts(result)
+
+            assert len(warnings) == 0
+
+    def test_check_expected_max_amounts_no_limit_set(self):
+        """Test that no warnings are generated when expected_max_amount is not set."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create category without expected_max_amount
+            category = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+            )
+            parser.category_manager.add_category(category)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={"Groceries": -150.00},
+                total_income=0.0,
+                total_expenses=-150.00,
+            )
+
+            warnings = parser._check_expected_max_amounts(result)
+
+            assert len(warnings) == 0
+
+    def test_check_expected_max_amounts_multiple_categories(self):
+        """Test that warnings are generated for multiple categories that exceed limits."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create categories with expected_max_amount
+            category1 = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+                expected_max_amount=100.00,
+            )
+            category2 = Category(
+                name="rent",
+                display_name="Rent",
+                search_strings=["landlord"],
+                expected_max_amount=500.00,
+            )
+            parser.category_manager.add_category(category1)
+            parser.category_manager.add_category(category2)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={
+                    "Groceries": -150.00,  # Exceeds 100.00
+                    "Rent": -600.00,  # Exceeds 500.00
+                },
+                total_income=0.0,
+                total_expenses=-750.00,
+            )
+
+            warnings = parser._check_expected_max_amounts(result)
+
+            assert len(warnings) == 2
+            assert any("Groceries" in w and "150.00" in w for w in warnings)
+            assert any("Rent" in w and "600.00" in w for w in warnings)
+
+    def test_check_expected_max_amounts_income_category(self):
+        """Test that warnings work for income categories (positive amounts)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create category with expected_max_amount for income
+            category = Category(
+                name="salary",
+                display_name="Salary",
+                search_strings=["employer"],
+                expected_max_amount=2000.00,
+            )
+            parser.category_manager.add_category(category)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={"Salary": 3000.00},  # Exceeds 2000.00
+                total_income=3000.00,
+                total_expenses=0.0,
+            )
+
+            warnings = parser._check_expected_max_amounts(result)
+
+            assert len(warnings) == 1
+            assert "Salary" in warnings[0]
+            assert "3000.00" in warnings[0]
+            assert "2000.00" in warnings[0]
+
+    def test_format_summary_includes_warnings(self):
+        """Test that format_summary includes warnings at the end."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            parser = DKBParser(category_file, manual_file)
+
+            # Create category with expected_max_amount
+            category = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+                expected_max_amount=100.00,
+            )
+            parser.category_manager.add_category(category)
+
+            result = ParsingResult(
+                parsed_transactions=[],
+                uncategorized_transactions=[],
+                category_totals={"Groceries": -150.00},  # Exceeds 100.00
+                total_income=0.0,
+                total_expenses=-150.00,
+            )
+
+            output = parser.format_summary(result)
+
+            assert "⚠️  Warnung: Ungewöhnliche Umsätze detektiert:" in output
+            assert "Groceries" in output
+            assert "150.00" in output
+            assert "100.00" in output
 
 
 class TestDKBParserCalculateCategoryTotals:

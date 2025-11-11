@@ -868,3 +868,57 @@ class TestSummaryFormatter:
         assert "Total transactions processed: 2" in output
         assert "Categorized transactions: 1" in output
         assert "Uncategorized transactions: 0" in output
+
+    def test_format_summary_with_warnings(self):
+        """Test summary formatting with warnings for exceeded expected amounts."""
+        result = ParsingResult(
+            parsed_transactions=[],
+            uncategorized_transactions=[],
+            category_totals={
+                "Groceries": -150.00,  # Exceeds expected max
+                "Rent": -800.00,  # Within expected max
+            },
+            total_income=0.0,
+            total_expenses=-950.00,
+        )
+
+        warnings = [
+            "Ungewöhnlicher Umsatz in 'Groceries': 150.00 € (erwartet max. 100.00 €)",
+        ]
+
+        output = SummaryFormatter.format_summary(result, warnings)
+
+        assert "⚠️  Warnung: Ungewöhnliche Umsätze detektiert:" in output
+        assert (
+            "Ungewöhnlicher Umsatz in 'Groceries': 150.00 € (erwartet max. 100.00 €)"
+            in output
+        )
+
+    def test_format_summary_without_warnings(self):
+        """Test summary formatting without warnings."""
+        result = ParsingResult(
+            parsed_transactions=[],
+            uncategorized_transactions=[],
+            category_totals={"Groceries": -50.25},
+            total_income=0.0,
+            total_expenses=-50.25,
+        )
+
+        output = SummaryFormatter.format_summary(result, warnings=None)
+
+        assert "⚠️  Warnung" not in output
+        assert "Ungewöhnlicher Umsatz" not in output
+
+    def test_format_summary_with_empty_warnings(self):
+        """Test summary formatting with empty warnings list."""
+        result = ParsingResult(
+            parsed_transactions=[],
+            uncategorized_transactions=[],
+            category_totals={"Groceries": -50.25},
+            total_income=0.0,
+            total_expenses=-50.25,
+        )
+
+        output = SummaryFormatter.format_summary(result, warnings=[])
+
+        assert "⚠️  Warnung" not in output

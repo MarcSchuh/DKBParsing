@@ -125,8 +125,7 @@ This library is designed to be easily extensible. You can:
 
 See LICENSE file for details.
 
-# ToDo
-- Wenn das Output Template nicht alles abdeckt, was an Kategorien befüllt wird, soll ein Fehler geworfen werden.
-- Maximalbetrag pro Kategorie
+# Ideas
+- Maximum a
 - Pipeline
 - Readme

@@ -203,8 +203,13 @@ class SummaryFormatter:
     """Formats summary information."""
 
     @staticmethod
-    def format_summary(result: ParsingResult) -> str:
-        """Format a summary of the parsing result."""
+    def format_summary(result: ParsingResult, warnings: list[str] | None = None) -> str:
+        """Format a summary of the parsing result.
+
+        Args:
+            result: ParsingResult object
+            warnings: Optional list of warning messages to display at the end
+        """
         lines = []
         lines.append("=== DKB Parsing Summary ===")
         lines.append(f"Total transactions processed: {len(result.parsed_transactions)}")
@@ -226,5 +231,11 @@ class SummaryFormatter:
             for category, total in sorted(result.category_totals.items()):
                 if total != 0:
                     lines.append(f"  {category}: {total:.2f} €")
+
+        if warnings:
+            lines.append("")
+            lines.append("⚠️  Warnung: Ungewöhnliche Umsätze detektiert:")
+            for warning in warnings:
+                lines.append(f"  • {warning}")
 
         return "\n".join(lines)

@@ -5,7 +5,8 @@
       "REWE",
       "EDEKA"
     ],
-    "regex_patterns": []
+    "regex_patterns": [],
+    "expected_max_amount": 300.0
   },
   "tanken": {
     "display_name": "Tanken",
@@ -13,7 +14,8 @@
       "SHELL",
       "TOTAL"
     ],
-    "regex_patterns": []
+    "regex_patterns": [],
+    "expected_max_amount": 150.0
   },
   "miete": {
     "display_name": "Miete",

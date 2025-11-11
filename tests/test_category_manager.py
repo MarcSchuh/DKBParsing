@@ -1226,6 +1226,36 @@ class TestSaveLoadCategories:
             assert manager2.categories["groceries"].regex_patterns == [r"^GROCERY"]
             assert manager2.categories["salary"].display_name == "Salary"
 
+    def test_save_load_expected_max_amount(self):
+        """Test that expected_max_amount is saved and loaded correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager1 = CategoryManager(category_file, manual_file)
+
+            category1 = Category(
+                name="groceries",
+                display_name="Groceries",
+                search_strings=["supermarket"],
+                expected_max_amount=100.00,
+            )
+            category2 = Category(
+                name="rent",
+                display_name="Rent",
+                search_strings=["landlord"],
+                # No expected_max_amount
+            )
+
+            manager1.add_category(category1)
+            manager1.add_category(category2)
+
+            # Create new manager and load
+            manager2 = CategoryManager(category_file, manual_file)
+
+            assert manager2.categories["groceries"].expected_max_amount == 100.00
+            assert manager2.categories["rent"].expected_max_amount is None
+
 
 class TestSaveLoadManualAssignments:
     """Tests for saving and loading manual assignments."""
