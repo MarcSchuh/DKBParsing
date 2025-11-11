@@ -90,15 +90,10 @@ def main():
     )
 
     parser.add_argument(
-        "--manual-assignments",
-        help="JSON file with manual transaction assignments (overrides CLI config)",
-    )
-
-    parser.add_argument(
         "--add-manual",
         nargs=4,
         metavar=("DATE", "RECIPIENT", "PURPOSE", "CATEGORY"),
-        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data. Requires --manual-assignments or manual_assignments_file in CLI config.",
+        help="Add manual assignment (DATE in DD.MM.YY format). Amount is automatically taken from transaction data. Requires --cli-config with manual_assignments_file set.",
     )
 
     parser.add_argument(
@@ -141,9 +136,7 @@ def main():
 
     # Merge CLI config with command-line arguments (CLI args take precedence)
     config_file = args.config or cli_config.get("category_config")
-    manual_assignments_file = args.manual_assignments or cli_config.get(
-        "manual_assignments_file",
-    )
+    manual_assignments_file = cli_config.get("manual_assignments_file")
     output_template = cli_config.get("output_template")
     output_format = cli_config.get("output_format", "excel")
 
@@ -178,9 +171,15 @@ def main():
             )
             sys.exit(1)
 
+        if not args.cli_config:
+            logger.error(
+                "Error: --cli-config is required for --add-manual",
+            )
+            sys.exit(1)
+
         if not manual_assignments_file:
             logger.error(
-                "Error: --manual-assignments or manual_assignments_file in CLI config is required for --add-manual",
+                "Error: manual_assignments_file must be set in CLI config for --add-manual",
             )
             sys.exit(1)
 
