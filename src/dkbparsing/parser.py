@@ -3,6 +3,7 @@ Main parser class that orchestrates the parsing process.
 """
 
 from datetime import datetime
+from pathlib import Path
 
 from .category_manager import CategoryManager
 from .csv_parser import DKBCSVParser
@@ -15,11 +16,11 @@ class DKBParser:
 
     def __init__(
         self,
-        config_file: str | None = None,
-        manual_assignments_file: str | None = None,
+        category_file: Path,
+        manual_assignments_file: Path | None = None,
     ):
         self.csv_parser = DKBCSVParser()
-        self.category_manager = CategoryManager(config_file, manual_assignments_file)
+        self.category_manager = CategoryManager(category_file, manual_assignments_file)
         self.excel_formatter = ExcelFormatter()
         self.summary_formatter = SummaryFormatter()
 
@@ -101,11 +102,11 @@ class DKBParser:
         """Remove a search string from a category."""
         self.category_manager.remove_search_string(category_name, search_string)
 
-    def save_config(self, file_path: str) -> None:
+    def save_config(self, file_path: Path) -> None:
         """Save category configuration to file."""
         self.category_manager.save_categories(file_path)
 
-    def load_config(self, file_path: str) -> None:
+    def load_config(self, file_path: Path) -> None:
         """Load category configuration from file."""
         self.category_manager.load_categories(file_path)
 
@@ -130,7 +131,7 @@ class DKBParser:
         """Remove a manual assignment."""
         self.category_manager.remove_manual_assignment(date, recipient, purpose)
 
-    def save_manual_assignments(self, file_path: str) -> None:
+    def save_manual_assignments(self, file_path: Path) -> None:
         """Save manual assignments to file."""
         self.category_manager.save_manual_assignments(file_path)
 

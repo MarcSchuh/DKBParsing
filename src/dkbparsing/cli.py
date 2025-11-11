@@ -125,28 +125,34 @@ def main():
     config = load_config(args.config) if args.config else {}
 
     # Load configuration from CLI config
-    category_file = config.get("category_config")
-    manual_assignments_file = config.get("manual_assignments_file")
+    category_file_str = config.get("category_config")
+    manual_assignments_file_str = config.get("manual_assignments_file")
     output_template = config.get("output_template")
     output_format = config.get("output_format", "excel")
+
+    # Ensure category_file is set (required)
+    if not args.config:
+        logger.error(
+            "Error: --config is required. Please provide a CLI config file with category_config set.",
+        )
+        sys.exit(1)
+
+    if not category_file_str:
+        logger.error(
+            "Error: category_config must be set in CLI config file",
+        )
+        sys.exit(1)
+
+    category_file = Path(category_file_str)
+    manual_assignments_file = (
+        Path(manual_assignments_file_str) if manual_assignments_file_str else None
+    )
 
     # Initialize parser
     dkb_parser = DKBParser(category_file, manual_assignments_file)
 
     # Handle category management
     if args.add_category:
-        if not args.config:
-            logger.error(
-                "Error: --config is required for --add-category",
-            )
-            sys.exit(1)
-
-        if not category_file:
-            logger.error(
-                "Error: category_config must be set in CLI config for --add-category",
-            )
-            sys.exit(1)
-
         name, display_name, search_string = args.add_category
         dkb_parser.add_category(name, display_name, [search_string])
         logger.info(f"Added category '{name}' with search string '{search_string}'")
@@ -160,12 +166,6 @@ def main():
             )
             logger.error(
                 f"Received {len(args.add_manual)} arguments: {args.add_manual}",
-            )
-            sys.exit(1)
-
-        if not args.config:
-            logger.error(
-                "Error: --config is required for --add-manual",
             )
             sys.exit(1)
 
