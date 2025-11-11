@@ -14,10 +14,8 @@ from .parser import DKBParser
 logger = logging.getLogger(__name__)
 
 
-def load_config(config_file: str | None) -> dict:
+def load_config(config_file: str) -> dict:
     """Load CLI configuration from JSON file."""
-    if not config_file:
-        return {}
 
     config_path = Path(config_file)
     if not config_path.exists():
@@ -107,8 +105,8 @@ def main():
         format="%(levelname)s: %(message)s",
     )
 
-    # Load CLI config if provided
-    config = load_config(args.config) if args.config else {}
+    # Load config
+    config = load_config(args.config)
 
     # Load configuration from CLI config
     category_file_str = config.get("category_config")
