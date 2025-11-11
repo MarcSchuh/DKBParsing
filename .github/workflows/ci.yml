@@ -4,14 +4,14 @@ on:
   pull_request:
     branches: ["*"]
   push:
-    branches: ["*"]
+    branches: ["main"]
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.13"]
 
     steps:
       - name: Checkout code
