@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from dkbparsing.category_manager import ManualAssignmentCategoryError
 from dkbparsing.cli import FileSavingError, load_config, main, save_config
 
 
@@ -169,6 +170,19 @@ class TestCLIMain:
             with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(config_data, f)
 
+            # Create category first
+            from dkbparsing.category_manager import CategoryManager
+            from dkbparsing.models import Category
+
+            manager = CategoryManager(category_file, manual_file)
+            manager.add_category(
+                Category(
+                    name="test_category",
+                    display_name="Test Category",
+                    search_strings=[],
+                ),
+            )
+
             with (
                 patch(
                     "sys.argv",
@@ -188,6 +202,39 @@ class TestCLIMain:
                 main()
 
                 mock_logger.info.assert_called()
+
+    def test_main_add_manual_assignment_with_invalid_category(self):
+        """Test that adding manual assignment with invalid category raises ManualAssignmentCategoryError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "cli.py",
+                        "--config",
+                        str(config_file),
+                        "--add-manual",
+                        "16.01.24",
+                        "Test Recipient",
+                        "Test Purpose",
+                        "nonexistent_category",
+                    ],
+                ),
+                pytest.raises(ManualAssignmentCategoryError),
+            ):
+                main()
 
     def test_main_parse_csv_file(self):
         """Test parsing a CSV file via CLI."""

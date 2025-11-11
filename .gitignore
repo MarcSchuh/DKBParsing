@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.so
 *.egg-info/
+.coverage
 dist/
 build/
 
@@ -29,5 +30,3 @@ dmypy.json
 # OS files
 .DS_Store
 Thumbs.db
-
-old-approach/*

@@ -8,7 +8,11 @@ from unittest.mock import patch
 
 import pytest
 
-from dkbparsing.category_manager import CategoryManager, FileLoadingError
+from dkbparsing.category_manager import (
+    CategoryManager,
+    FileLoadingError,
+    ManualAssignmentCategoryError,
+)
 from dkbparsing.models import Category, ParsedTransaction, Transaction, TransactionType
 
 
@@ -58,6 +62,17 @@ class TestCategoryManagerInitialization:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
 
+            # Create category file with the category referenced in manual assignments
+            category_data = {
+                "test": {
+                    "display_name": "Test",
+                    "search_strings": [],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
             # Create manual assignments file
             manual_data = {
                 "manual_assignments": [
@@ -74,7 +89,8 @@ class TestCategoryManagerInitialization:
 
             manager = CategoryManager(category_file, manual_file)
 
-            assert manager.categories == {}
+            assert len(manager.categories) == 1
+            assert "test" in manager.categories
             assert len(manager.manual_assignments) == 1
             assert manager.manual_assignments[0]["category"] == "test"
 
@@ -138,6 +154,22 @@ class TestCategoryManagerInitialization:
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file with categories referenced in manual assignments
+            category_data = {
+                "cat1": {
+                    "display_name": "Category 1",
+                    "search_strings": [],
+                    "regex_patterns": [],
+                },
+                "cat2": {
+                    "display_name": "Category 2",
+                    "search_strings": [],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
 
             manual_data = {
                 "manual_assignments": [
@@ -1206,6 +1238,10 @@ class TestSaveLoadManualAssignments:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Test",
@@ -1222,6 +1258,10 @@ class TestSaveLoadManualAssignments:
             manual_file = Path(tmpdir) / "subdir" / "manual.json"
 
             manager = CategoryManager(category_file, manual_file)
+
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
 
             manager.add_manual_assignment(
                 date="16.01.24",
@@ -1240,6 +1280,10 @@ class TestSaveLoadManualAssignments:
             manual_file = Path(tmpdir) / "manual.json"
 
             manager = CategoryManager(category_file, manual_file)
+
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
 
             manager.add_manual_assignment(
                 date="16.01.24",
@@ -1260,6 +1304,22 @@ class TestSaveLoadManualAssignments:
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file with categories referenced in manual assignments
+            category_data = {
+                "cat1": {
+                    "display_name": "Category 1",
+                    "search_strings": [],
+                    "regex_patterns": [],
+                },
+                "cat2": {
+                    "display_name": "Category 2",
+                    "search_strings": [],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
 
             manual_data = {
                 "manual_assignments": [
@@ -1323,6 +1383,26 @@ class TestSaveLoadManualAssignments:
 
             manager1 = CategoryManager(category_file, manual_file)
 
+            # Create categories first
+            from dkbparsing.models import Category
+
+            manager1.add_category(
+                Category(
+                    name="cat1",
+                    display_name="Category 1",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
+            manager1.add_category(
+                Category(
+                    name="cat2",
+                    display_name="Category 2",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
+
             manager1.add_manual_assignment(
                 date="16.01.24",
                 recipient="Recipient1",
@@ -1356,6 +1436,10 @@ class TestManualAssignmentManagement:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Test",
@@ -1375,6 +1459,10 @@ class TestManualAssignmentManagement:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Test",
@@ -1386,8 +1474,8 @@ class TestManualAssignmentManagement:
             assert len(manager.manual_assignments) == 1
             assert manager.manual_assignments[0]["amount"] == 100.50
 
-    def test_add_manual_assignment_creates_category(self):
-        """Test that category is created if it doesn't exist."""
+    def test_add_manual_assignment_raises_error_if_category_not_exists(self):
+        """Test that ManualAssignmentCategoryError is raised if category doesn't exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -1396,16 +1484,19 @@ class TestManualAssignmentManagement:
 
             assert "new_category" not in manager.categories
 
-            manager.add_manual_assignment(
-                date="16.01.24",
-                recipient="Test",
-                purpose="Test",
-                category_name="new_category",
-            )
+            # Should raise ManualAssignmentCategoryError
+            with pytest.raises(ManualAssignmentCategoryError) as exc_info:
+                manager.add_manual_assignment(
+                    date="16.01.24",
+                    recipient="Test",
+                    purpose="Test",
+                    category_name="new_category",
+                )
 
-            assert "new_category" in manager.categories
-            assert manager.categories["new_category"].name == "new_category"
-            assert manager.categories["new_category"].display_name == "new_category"
+            assert "new_category" in str(exc_info.value)
+            assert (
+                "new_category" not in manager.categories
+            )  # Category should not be created
 
     def test_add_manual_assignment_existing_category(self):
         """Test that existing category is used."""
@@ -1441,6 +1532,10 @@ class TestManualAssignmentManagement:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Test",
@@ -1461,6 +1556,26 @@ class TestManualAssignmentManagement:
             manual_file = Path(tmpdir) / "manual.json"
 
             manager = CategoryManager(category_file, manual_file)
+
+            # Create categories first
+            from dkbparsing.models import Category
+
+            manager.add_category(
+                Category(
+                    name="cat1",
+                    display_name="Category 1",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
+            manager.add_category(
+                Category(
+                    name="cat2",
+                    display_name="Category 2",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
 
             manager.add_manual_assignment(
                 date="16.01.24",
@@ -1488,6 +1603,18 @@ class TestManualAssignmentManagement:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            from dkbparsing.models import Category
+
+            manager.add_category(
+                Category(
+                    name="cat1",
+                    display_name="Category 1",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Recipient1",
@@ -1508,6 +1635,18 @@ class TestManualAssignmentManagement:
             manual_file = Path(tmpdir) / "manual.json"
 
             manager = CategoryManager(category_file, manual_file)
+
+            # Create category first
+            from dkbparsing.models import Category
+
+            manager.add_category(
+                Category(
+                    name="cat1",
+                    display_name="Category 1",
+                    search_strings=[],
+                    regex_patterns=[],
+                ),
+            )
 
             manager.add_manual_assignment(
                 date="16.01.24",
@@ -1652,6 +1791,10 @@ class TestCheckManualAssignment:
 
             manager = CategoryManager(category_file, manual_file)
 
+            # Create category first
+            category = Category(name="test", display_name="Test", search_strings=[])
+            manager.add_category(category)
+
             manager.add_manual_assignment(
                 date="16.01.24",
                 recipient="Recipient1",
@@ -1676,7 +1819,7 @@ class TestCheckManualAssignment:
             assert result is None
 
     def test_check_manual_assignment_category_not_found(self):
-        """Test when category from assignment doesn't exist."""
+        """Test when category from assignment doesn't exist raises ManualAssignmentCategoryError."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -1705,10 +1848,11 @@ class TestCheckManualAssignment:
                 amount=-50.25,
             )
 
-            result = manager._check_manual_assignment(transaction)
+            # Should raise ManualAssignmentCategoryError because category doesn't exist
+            with pytest.raises(ManualAssignmentCategoryError) as exc_info:
+                manager._check_manual_assignment(transaction)
 
-            # Should return None because category doesn't exist
-            assert result is None
+            assert "nonexistent_category" in str(exc_info.value)
 
     def test_check_manual_assignment_date_format(self):
         """Test correct date formatting (dd.mm.yy)."""
@@ -1747,3 +1891,162 @@ class TestCheckManualAssignment:
             result = manager._check_manual_assignment(transaction)
 
             assert result == category
+
+
+class TestManualAssignmentCategoryError:
+    """Tests for ManualAssignmentCategoryError when manual assignments reference non-existent categories."""
+
+    def test_load_manual_assignments_with_invalid_category(self):
+        """Test that loading manual assignments with invalid category raises ManualAssignmentCategoryError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file with one category
+            category_data = {
+                "groceries": {
+                    "display_name": "Groceries",
+                    "search_strings": ["supermarket"],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
+            # Create manual assignments file with invalid category
+            manual_data = {
+                "manual_assignments": [
+                    {
+                        "date": "16.01.24",
+                        "recipient": "Recipient1",
+                        "purpose": "Purpose1",
+                        "category": "nonexistent_category",
+                    },
+                ],
+            }
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump(manual_data, f)
+
+            # Should raise ManualAssignmentCategoryError
+            with pytest.raises(ManualAssignmentCategoryError) as exc_info:
+                CategoryManager(category_file, manual_file)
+
+            assert "nonexistent_category" in str(exc_info.value)
+            assert "groceries" in str(
+                exc_info.value,
+            )  # Should mention available categories
+
+    def test_load_manual_assignments_with_multiple_invalid_categories(self):
+        """Test that loading manual assignments with multiple invalid categories raises error on first invalid one."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file with one category
+            category_data = {
+                "groceries": {
+                    "display_name": "Groceries",
+                    "search_strings": ["supermarket"],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
+            # Create manual assignments file with multiple invalid categories
+            manual_data = {
+                "manual_assignments": [
+                    {
+                        "date": "16.01.24",
+                        "recipient": "Recipient1",
+                        "purpose": "Purpose1",
+                        "category": "invalid1",
+                    },
+                    {
+                        "date": "20.02.24",
+                        "recipient": "Recipient2",
+                        "purpose": "Purpose2",
+                        "category": "invalid2",
+                    },
+                ],
+            }
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump(manual_data, f)
+
+            # Should raise ManualAssignmentCategoryError on first invalid category
+            with pytest.raises(ManualAssignmentCategoryError) as exc_info:
+                CategoryManager(category_file, manual_file)
+
+            assert "invalid1" in str(exc_info.value)
+
+    def test_check_manual_assignment_with_invalid_category(self):
+        """Test that checking manual assignment with invalid category raises ManualAssignmentCategoryError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file with one category
+            category_data = {
+                "groceries": {
+                    "display_name": "Groceries",
+                    "search_strings": ["supermarket"],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
+            # Create manual assignments file with invalid category
+            manual_data = {
+                "manual_assignments": [
+                    {
+                        "date": "16.01.24",
+                        "recipient": "Test Recipient",
+                        "purpose": "Test Purpose",
+                        "category": "nonexistent_category",
+                    },
+                ],
+            }
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump(manual_data, f)
+
+            # This should raise ManualAssignmentCategoryError during initialization
+            # But if we somehow bypass that, it should also raise in _check_manual_assignment
+            with pytest.raises(ManualAssignmentCategoryError):
+                CategoryManager(category_file, manual_file)
+
+    def test_load_manual_assignments_with_valid_category(self):
+        """Test that loading manual assignments with valid category does not raise error."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            # Create category file
+            category_data = {
+                "groceries": {
+                    "display_name": "Groceries",
+                    "search_strings": ["supermarket"],
+                    "regex_patterns": [],
+                },
+            }
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
+            # Create manual assignments file with valid category
+            manual_data = {
+                "manual_assignments": [
+                    {
+                        "date": "16.01.24",
+                        "recipient": "Recipient1",
+                        "purpose": "Purpose1",
+                        "category": "groceries",
+                    },
+                ],
+            }
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump(manual_data, f)
+
+            # Should not raise any error
+            manager = CategoryManager(category_file, manual_file)
+            assert len(manager.manual_assignments) == 1
+            assert manager.manual_assignments[0]["category"] == "groceries"

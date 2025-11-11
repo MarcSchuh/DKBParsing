@@ -24,6 +24,10 @@ class TransactionParsingError(Exception):
     """Exception raised when a transaction cannot be parsed."""
 
 
+class ManualAssignmentCategoryError(Exception):
+    """Exception raised when a manual assignment references a category that doesn't exist."""
+
+
 class CategoryManager:
     """Manages transaction categories and their search patterns."""
 
@@ -259,6 +263,19 @@ class CategoryManager:
                 data = json.load(f)
 
             self.manual_assignments = data.get("manual_assignments", [])
+
+            # Validate that all categories in manual assignments exist
+            for assignment in self.manual_assignments:
+                category_name = assignment.get("category")
+                if (
+                    isinstance(category_name, str)
+                    and category_name not in self.categories
+                ):
+                    raise ManualAssignmentCategoryError(
+                        f"Manual assignment references category '{category_name}' which does not exist. "
+                        f"Available categories: {list(self.categories.keys())}",
+                    )
+
             logger.debug(
                 f"Loaded {len(self.manual_assignments)} manual assignments from {self.manual_assignments_file}",
             )
@@ -305,16 +322,11 @@ class CategoryManager:
         amount: float | None = None,
     ) -> None:
         """Add a manual assignment. Amount is optional and only used for validation."""
-        # Create category if it doesn't exist
+        # Validate that category exists
         if category_name not in self.categories:
-            logger.info(f"Creating category '{category_name}' for manual assignment")
-            from .models import Category
-
-            self.categories[category_name] = Category(
-                name=category_name,
-                display_name=category_name,
-                search_strings=[],
-                regex_patterns=[],
+            raise ManualAssignmentCategoryError(
+                f"Manual assignment references category '{category_name}' which does not exist. "
+                f"Available categories: {list(self.categories.keys())}",
             )
 
         assignment: dict[str, str | float] = {
@@ -373,7 +385,12 @@ class CategoryManager:
                         continue  # Amount mismatch, skip this assignment
 
                 category_name = assignment["category"]
-                if isinstance(category_name, str) and category_name in self.categories:
+                if isinstance(category_name, str):
+                    if category_name not in self.categories:
+                        raise ManualAssignmentCategoryError(
+                            f"Manual assignment references category '{category_name}' which does not exist. "
+                            f"Available categories: {list(self.categories.keys())}",
+                        )
                     return self.categories[category_name]
 
         return None
