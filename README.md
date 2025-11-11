@@ -19,6 +19,18 @@ uv sync --no-dev
 
 This will create a virtual environment and install all dependencies from `pyproject.toml`.
 
+### Updating
+
+```bash
+uv lock
+```
+
+
+### Testing
+```bash
+python -m pytest tests/
+```
+
 ### Code Quality Tools
 **Pre-commit Hooks (Recommended):**
 

@@ -54,7 +54,7 @@ class DKBCSVParser:
                 try:
                     transaction = Transaction.from_csv_row(row)
                     transactions.append(transaction)
-                except Exception as e:
+                except (ValueError, KeyError, TypeError) as e:
                     logger.warning(f"Could not parse transaction row: {e}")
                     continue
 

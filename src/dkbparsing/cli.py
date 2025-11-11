@@ -14,6 +14,10 @@ from .parser import DKBParser
 logger = logging.getLogger(__name__)
 
 
+class FileSavingError(Exception):
+    """Exception raised when a file cannot be saved."""
+
+
 def load_config(config_file: str) -> dict:
     """Load CLI configuration from JSON file."""
 
@@ -30,7 +34,7 @@ def load_config(config_file: str) -> dict:
     except json.JSONDecodeError as e:
         logger.warning(f"Invalid JSON in CLI config file {config_file}: {e}")
         return {}
-    except Exception as e:
+    except OSError as e:
         logger.warning(f"Failed to load CLI config from {config_file}: {e}")
         return {}
 
@@ -43,9 +47,11 @@ def save_config(config_file: str, config: dict) -> None:
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
         logger.info(f"CLI configuration saved to {config_file}")
-    except Exception as e:
+    except OSError as e:
         logger.error(f"Failed to save CLI config to {config_file}: {e}")
-        raise
+        raise FileSavingError(
+            f"Failed to save CLI config to {config_file}: {e}",
+        ) from e
 
 
 def main():
@@ -189,7 +195,7 @@ def main():
     # Parse the CSV file
     try:
         result = dkb_parser.parse_file(args.csv_file, start_date, end_date)
-    except Exception as e:
+    except (ValueError, FileNotFoundError, OSError) as e:
         logger.error(f"Error parsing file: {e}")
         sys.exit(1)
 

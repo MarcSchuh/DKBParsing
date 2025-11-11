@@ -12,6 +12,18 @@ from .models import Category, ParsedTransaction, Transaction
 logger = logging.getLogger(__name__)
 
 
+class FileLoadingError(Exception):
+    """Exception raised when a file cannot be loaded."""
+
+
+class FileSavingError(Exception):
+    """Exception raised when a file cannot be saved."""
+
+
+class TransactionParsingError(Exception):
+    """Exception raised when a transaction cannot be parsed."""
+
+
 class CategoryManager:
     """Manages transaction categories and their search patterns."""
 
@@ -54,7 +66,7 @@ class CategoryManager:
         # Auto-save
         try:
             self.save_categories()
-        except Exception as e:
+        except FileSavingError as e:
             logger.warning(
                 f"Failed to auto-save categories after adding '{category.name}': {e}. "
                 f"Please save manually using save_categories().",
@@ -69,7 +81,7 @@ class CategoryManager:
             # Auto-save
             try:
                 self.save_categories()
-            except Exception as e:
+            except FileSavingError as e:
                 logger.warning(
                     f"Failed to auto-save categories after removing '{name}': {e}. "
                     f"Please save manually using save_categories().",
@@ -206,9 +218,11 @@ class CategoryManager:
             with open(self.category_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             logger.info(f"Successfully saved categories to {self.category_file}")
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Failed to save categories to {self.category_file}: {e}")
-            raise
+            raise FileSavingError(
+                f"Failed to save categories to {self.category_file}: {e}",
+            ) from e
 
     def load_categories(self) -> None:
         """Load categories from JSON file."""
@@ -231,9 +245,11 @@ class CategoryManager:
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in category file {self.category_file}: {e}")
             raise
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Failed to load categories from {self.category_file}: {e}")
-            raise
+            raise FileLoadingError(
+                f"Failed to load categories from {self.category_file}: {e}",
+            ) from e
 
     def load_manual_assignments(self) -> None:
         """Load manual assignments from JSON file."""
@@ -251,11 +267,13 @@ class CategoryManager:
                 f"Invalid JSON in manual assignments file {self.manual_assignments_file}: {e}",
             )
             raise
-        except Exception as e:
+        except OSError as e:
             logger.error(
                 f"Failed to load manual assignments from {self.manual_assignments_file}: {e}",
             )
-            raise
+            raise FileLoadingError(
+                f"Failed to load manual assignments from {self.manual_assignments_file}: {e}",
+            ) from e
 
     def save_manual_assignments(self) -> None:
         """Save manual assignments to JSON file."""
@@ -270,11 +288,13 @@ class CategoryManager:
             logger.info(
                 f"Successfully saved manual assignments to {self.manual_assignments_file}",
             )
-        except Exception as e:
+        except OSError as e:
             logger.error(
                 f"Failed to save manual assignments to {self.manual_assignments_file}: {e}",
             )
-            raise
+            raise FileSavingError(
+                f"Failed to save manual assignments to {self.manual_assignments_file}: {e}",
+            ) from e
 
     def add_manual_assignment(
         self,
