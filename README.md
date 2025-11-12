@@ -2,6 +2,7 @@
 
 A Python tool for parsing and categorizing DKB (Deutsche Kreditbank) account statement CSV exports.
 Automatically categorizes transactions using search strings and regex patterns, supports manual assignments, and generates Excel-compatible output for easy integration into your budget spreadsheets.
+It also offers AI-powered categorization suggestions using OpenRouter API to help categorize unknown transactions based on existing patterns.
 
 ## Getting Ready
 
@@ -77,6 +78,11 @@ Create a CLI configuration file (JSON) that specifies:
 - `manual_assignments_file`: Path to your manual assignments JSON file
 - `output_template`: (Optional) Path to household budget template file
 - `output_format`: Output format - `"excel"`, `"summary"`, `"household"`, or `"both"`
+- `openrouter_api_key`: (Optional) OpenRouter API key for AI-powered categorization suggestions
+- `system_prompt_file`: (Optional) Path to system prompt file for AI categorization
+- `user_prompt_file`: (Optional) Path to user prompt template file for AI categorization
+
+**Note:** For AI-powered categorization, all three OpenRouter fields (`openrouter_api_key`, `system_prompt_file`, `user_prompt_file`) must be provided. If only some are provided, a warning will be shown and OpenRouter will not be called.
 
 Example `cli_config.json`:
 ```json
@@ -84,7 +90,10 @@ Example `cli_config.json`:
   "category_config": "my_categories.json",
   "manual_assignments_file": "manual_assignments.json",
   "output_template": "household_template.txt",
-  "output_format": "household"
+  "output_format": "household",
+  "openrouter_api_key": "sk-or-v1-...",
+  "system_prompt_file": "examples/system_prompt.txt",
+  "user_prompt_file": "examples/user_prompt.txt"
 }
 ```
 
@@ -126,6 +135,66 @@ An example can be found at `examples/manual_assigments.json`:
 }
 ```
 The defined category must exist in your category file.
+
+### AI-Powered Categorization (OpenRouter)
+
+The tool can use AI to suggest categories for uncategorized transactions. This feature uses OpenRouter API with auto-routing to select the best AI model for the task.
+
+#### Setup
+
+1. **Get an OpenRouter API key:**
+   - Sign up at [OpenRouter](https://openrouter.ai/)
+   - Create an API key in your dashboard
+
+2. **Create prompt files:**
+   - **System Prompt** (`system_prompt.txt`): Defines the AI's role and behavior
+   - **User Prompt Template** (`user_prompt.txt`): Template for the user message with placeholders
+
+3. **Configure in `cli_config.json`:**
+   ```json
+   {
+     "openrouter_api_key": "sk-or-v1-your-api-key",
+     "system_prompt_file": "examples/system_prompt.txt",
+     "user_prompt_file": "examples/user_prompt.txt"
+   }
+   ```
+
+#### How It Works
+
+When all three OpenRouter configuration fields are provided:
+1. After parsing and categorization, uncategorized transactions are sent to OpenRouter
+2. The AI analyzes the transactions along with existing manual assignments as context
+3. The AI suggests appropriate categories based on patterns it identifies
+4. Suggestions are displayed at the end of the output
+
+#### Prompt Templates
+
+The user prompt template supports placeholders:
+- `{manual_assignments}`: Replaced with JSON of existing manual assignments
+- `{uncategorized_transactions}`: Replaced with JSON of uncategorized transactions
+
+Example `user_prompt.txt`:
+```
+## Existing Manual Assignments:
+{manual_assignments}
+
+## Uncategorized Transactions:
+{uncategorized_transactions}
+
+Please suggest categories for the uncategorized transactions based on the existing manual assignments as context. Return your suggestions in a clear format.
+```
+
+#### Example System Prompt
+
+Example `system_prompt.txt`:
+```
+You are a financial transaction categorization assistant. Your task is to suggest appropriate categories for uncategorized bank transactions based on:
+
+1. The transaction details (date, recipient, purpose, amount, IBAN, etc.)
+2. Existing manual assignments that serve as examples of categorization patterns
+
+Analyze the uncategorized transactions and suggest categories that match the patterns seen in the manual assignments.
+```
 
 ### Basic Usage
 
@@ -201,6 +270,8 @@ See the `examples/` directory for:
 - Example CLI configuration (`cli_config.json`)
 - Household budget template (`household_template.txt`)
 - Manual assignments example (`manual_assignments.json`)
+- System prompt for AI categorization (`system_prompt.txt`)
+- User prompt template for AI categorization (`user_prompt.txt`)
 
 ## License
 
