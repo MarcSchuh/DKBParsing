@@ -6,68 +6,11 @@ It also offers AI-powered categorization suggestions using OpenRouter API to hel
 
 ## Getting Ready
 
-### Prerequisites
-
-This project uses [uv](https://github.com/astral-sh/uv), a fast Python package installer and resolver.
-
-**Install uv** (if not already installed):
+Install and sync dependencies:
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### Installation
-
-```bash
-# Sync dependencies and install the package (includes dev dependencies)
-uv sync
-
-# Or sync only production dependencies
-uv sync --no-dev
-```
-
-This will create a virtual environment and install all dependencies from `pyproject.toml`.
-
-## Development
-
-### Pre-commit Hooks
-
-The project uses pre-commit hooks to ensure code quality before commits. These hooks run:
-- **Ruff** for linting and formatting
-- **MyPy** for type checking
-- Various file checks (YAML, JSON, TOML validation, trailing whitespace, etc.)
-
-**Setup:**
-```bash
-# Install pre-commit hooks
-uv run pre-commit install
-
-# Manually run all hooks
-uv run pre-commit run --all-files
-```
-
-### Testing
-
-Run the test suite with pytest:
-```bash
-uv run pytest tests/ -v
-```
-
-Run tests with coverage:
-```bash
-uv run pytest tests/ --cov=src/dkbparsing --cov-report=html
-```
-
-## Maintenance
-
-### Updating Dependencies
-
-To update all dependencies to their latest compatible versions:
-```bash
-uv lock --upgrade
 uv sync
 ```
-
-This will update the `uv.lock` file and sync your environment with the new versions.
+For pre-commit hooks, tests etc. ask the LLM of your choice. 
 
 ## Usage
 

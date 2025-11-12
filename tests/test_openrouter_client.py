@@ -52,9 +52,6 @@ class TestCallOpenRouter:
             mock_response = Mock()
             mock_response.choices = [mock_choice]
 
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text("Test prompt", encoding="utf-8")
-
             with patch("dkbparsing.openrouter_client.OpenAI") as mock_openai_class:
                 mock_client = Mock()
                 mock_openai_class.return_value = mock_client
@@ -65,7 +62,6 @@ class TestCallOpenRouter:
                     system_prompt_file=system_prompt_file,
                     manual_assignments=manual_assignments,
                     uncategorized_transactions=uncategorized_transactions,
-                    user_prompt_file=user_prompt_file,
                 )
 
                 assert result == "Suggested category: test"
@@ -83,21 +79,17 @@ class TestCallOpenRouter:
 
     def test_call_openrouter_missing_system_prompt_file(self):
         """Test error when system prompt file doesn't exist."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            system_prompt_file = Path("/nonexistent/path/system_prompt.txt")
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text("Test prompt", encoding="utf-8")
+        system_prompt_file = Path("/nonexistent/path/system_prompt.txt")
 
-            with pytest.raises(OpenRouterError) as exc_info:
-                call_openrouter(
-                    api_key="test-api-key",
-                    system_prompt_file=system_prompt_file,
-                    manual_assignments=[],
-                    uncategorized_transactions=[],
-                    user_prompt_file=user_prompt_file,
-                )
+        with pytest.raises(OpenRouterError) as exc_info:
+            call_openrouter(
+                api_key="test-api-key",
+                system_prompt_file=system_prompt_file,
+                manual_assignments=[],
+                uncategorized_transactions=[],
+            )
 
-            assert "Failed to read system prompt file" in str(exc_info.value)
+        assert "Failed to read system prompt file" in str(exc_info.value)
 
     def test_call_openrouter_api_error(self):
         """Test error handling when API call fails."""
@@ -107,9 +99,6 @@ class TestCallOpenRouter:
                 "You are a helpful assistant.",
                 encoding="utf-8",
             )
-
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text("Test prompt", encoding="utf-8")
 
             with patch("dkbparsing.openrouter_client.OpenAI") as mock_openai_class:
                 mock_client = Mock()
@@ -122,7 +111,6 @@ class TestCallOpenRouter:
                         system_prompt_file=system_prompt_file,
                         manual_assignments=[],
                         uncategorized_transactions=[],
-                        user_prompt_file=user_prompt_file,
                     )
 
                 assert "OpenRouter API request failed" in str(exc_info.value)
@@ -135,9 +123,6 @@ class TestCallOpenRouter:
                 "You are a helpful assistant.",
                 encoding="utf-8",
             )
-
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text("Test prompt", encoding="utf-8")
 
             # Mock OpenAI response with empty choices
             mock_response = Mock()
@@ -154,7 +139,6 @@ class TestCallOpenRouter:
                         system_prompt_file=system_prompt_file,
                         manual_assignments=[],
                         uncategorized_transactions=[],
-                        user_prompt_file=user_prompt_file,
                     )
 
                 assert "Invalid response from OpenRouter API" in str(exc_info.value)
@@ -167,9 +151,6 @@ class TestCallOpenRouter:
                 "You are a helpful assistant.",
                 encoding="utf-8",
             )
-
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text("Test prompt", encoding="utf-8")
 
             # Mock OpenAI response with empty content
             mock_message = Mock()
@@ -190,7 +171,6 @@ class TestCallOpenRouter:
                         system_prompt_file=system_prompt_file,
                         manual_assignments=[],
                         uncategorized_transactions=[],
-                        user_prompt_file=user_prompt_file,
                     )
 
                 assert "Invalid response from OpenRouter API: empty content" in str(
@@ -223,12 +203,6 @@ class TestCallOpenRouter:
             mock_response = Mock()
             mock_response.choices = [mock_choice]
 
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text(
-                "## Existing Manual Assignments:\n{manual_assignments}\n\n## Uncategorized Transactions:\n{uncategorized_transactions}",
-                encoding="utf-8",
-            )
-
             with patch("dkbparsing.openrouter_client.OpenAI") as mock_openai_class:
                 mock_client = Mock()
                 mock_openai_class.return_value = mock_client
@@ -239,7 +213,6 @@ class TestCallOpenRouter:
                     system_prompt_file=system_prompt_file,
                     manual_assignments=manual_assignments,
                     uncategorized_transactions=[],
-                    user_prompt_file=user_prompt_file,
                 )
 
                 # Verify that manual assignments are in the user message
@@ -280,12 +253,6 @@ class TestCallOpenRouter:
             mock_response = Mock()
             mock_response.choices = [mock_choice]
 
-            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
-            user_prompt_file.write_text(
-                "## Existing Manual Assignments:\n{manual_assignments}\n\n## Uncategorized Transactions:\n{uncategorized_transactions}",
-                encoding="utf-8",
-            )
-
             with patch("dkbparsing.openrouter_client.OpenAI") as mock_openai_class:
                 mock_client = Mock()
                 mock_openai_class.return_value = mock_client
@@ -296,7 +263,6 @@ class TestCallOpenRouter:
                     system_prompt_file=system_prompt_file,
                     manual_assignments=[],
                     uncategorized_transactions=uncategorized_transactions,
-                    user_prompt_file=user_prompt_file,
                 )
 
                 # Verify that uncategorized transactions are in the user message

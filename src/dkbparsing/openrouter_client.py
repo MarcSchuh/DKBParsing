@@ -21,7 +21,6 @@ def call_openrouter(
     system_prompt_file: Path,
     manual_assignments: list[dict[str, Any]],
     uncategorized_transactions: list[dict[str, Any]],
-    user_prompt_file: Path,
 ) -> str:
     """
     Call OpenRouter API with auto-routing to get categorization suggestions.
@@ -31,9 +30,6 @@ def call_openrouter(
         system_prompt_file: Path to file containing system prompt
         manual_assignments: List of manual assignments (for context)
         uncategorized_transactions: List of uncategorized transactions to categorize
-        user_prompt_file: Path to file containing user prompt template.
-            The template should contain placeholders {manual_assignments} and
-            {uncategorized_transactions} which will be replaced with JSON data.
 
     Returns:
         Response text from OpenRouter API
@@ -50,31 +46,29 @@ def call_openrouter(
             f"Failed to read system prompt file {system_prompt_file}: {e}",
         ) from e
 
-    # Read user prompt template from file (required)
-    try:
-        with open(user_prompt_file, encoding="utf-8") as f:
-            user_prompt_template = f.read()
-    except OSError as e:
-        raise OpenRouterError(
-            f"Failed to read user prompt file {user_prompt_file}: {e}",
-        ) from e
+    # Prepare user message with context
+    user_message_parts = []
 
-    # Replace placeholders in template
-    manual_assignments_json = (
-        json.dumps(manual_assignments, indent=2, ensure_ascii=False)
-        if manual_assignments
-        else "[]"
-    )
-    uncategorized_transactions_json = (
-        json.dumps(uncategorized_transactions, indent=2, ensure_ascii=False)
-        if uncategorized_transactions
-        else "[]"
+    if manual_assignments:
+        user_message_parts.append("## Existing Manual Assignments:")
+        user_message_parts.append(
+            json.dumps(manual_assignments, indent=2, ensure_ascii=False),
+        )
+        user_message_parts.append("")
+
+    if uncategorized_transactions:
+        user_message_parts.append("## Uncategorized Transactions:")
+        user_message_parts.append(
+            json.dumps(uncategorized_transactions, indent=2, ensure_ascii=False),
+        )
+        user_message_parts.append("")
+
+    user_message_parts.append(
+        "Please suggest categories for the uncategorized transactions based on the "
+        "existing manual assignments as context. Return your suggestions in a clear format.",
     )
 
-    user_message = user_prompt_template.replace(
-        "{manual_assignments}",
-        manual_assignments_json,
-    ).replace("{uncategorized_transactions}", uncategorized_transactions_json)
+    user_message = "\n".join(user_message_parts)
 
     # Initialize OpenAI client with OpenRouter base URL
     try:
@@ -94,7 +88,7 @@ def call_openrouter(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            timeout=120.0,
+            timeout=60.0,
         )
 
         if not response.choices or not response.choices[0].message.content:

@@ -120,9 +120,6 @@ def main():
     manual_assignments_file_str = config.get("manual_assignments_file")
     output_template = config.get("output_template")
     output_format = config.get("output_format", "excel")
-    openrouter_api_key = config.get("openrouter_api_key")
-    system_prompt_file_str = config.get("system_prompt_file")
-    user_prompt_file_str = config.get("user_prompt_file")
 
     # Ensure category_file is set (required)
     if not args.config:
@@ -231,44 +228,16 @@ def main():
         logger.info(household_output)
         outputs_printed.append("household")
 
-    # Check OpenRouter configuration
-    has_api_key = bool(openrouter_api_key)
-    has_system_prompt = bool(system_prompt_file_str)
-    has_user_prompt = bool(user_prompt_file_str)
-
-    # Warn if only partially configured
-    if has_api_key or has_system_prompt or has_user_prompt:
-        missing = []
-        if not has_api_key:
-            missing.append("openrouter_api_key")
-        if not has_system_prompt:
-            missing.append("system_prompt_file")
-        if not has_user_prompt:
-            missing.append("user_prompt_file")
-
-        if missing:
-            logger.warning(
-                f"OpenRouter configuration incomplete. Missing: {', '.join(missing)}. "
-                "OpenRouter will not be called. All three fields (openrouter_api_key, "
-                "system_prompt_file, user_prompt_file) are required.",
-            )
-
-    # Call OpenRouter only if all three are provided
-    if has_api_key and has_system_prompt and has_user_prompt:
+    # Call OpenRouter if both API key and system prompt file are provided
+    if openrouter_api_key and system_prompt_file_str:
         if outputs_printed:
             logger.info("\n" + "=" * 50 + "\n")
 
         try:
             system_prompt_file = Path(system_prompt_file_str)
-            user_prompt_file = Path(user_prompt_file_str)
-
             if not system_prompt_file.exists():
                 logger.warning(
                     f"System prompt file {system_prompt_file} does not exist, skipping OpenRouter call",
-                )
-            elif not user_prompt_file.exists():
-                logger.warning(
-                    f"User prompt file {user_prompt_file} does not exist, skipping OpenRouter call",
                 )
             else:
                 # Convert transactions to dict format for JSON serialization
@@ -302,7 +271,6 @@ def main():
                     system_prompt_file=system_prompt_file,
                     manual_assignments=manual_assignments,
                     uncategorized_transactions=uncategorized_dicts,
-                    user_prompt_file=user_prompt_file,
                 )
 
                 # Display OpenRouter response
