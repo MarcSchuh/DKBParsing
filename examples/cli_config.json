@@ -2,5 +2,8 @@
   "category_config": "examples/sample_config.json",
   "manual_assignments_file": "examples/manual_assignments.json",
   "output_template": "examples/household_template.txt",
-  "output_format": "household"
+  "output_format": "household",
+  "openrouter_api_key": "",
+  "system_prompt_file": "examples/system_prompt.txt",
+  "user_prompt_file": "examples/user_prompt.txt"
 }
