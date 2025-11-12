@@ -1,0 +1,7 @@
+## Existing Manual Assignments:
+{manual_assignments}
+
+## Uncategorized Transactions:
+{uncategorized_transactions}
+
+Please suggest categories for the uncategorized transactions based on the existing manual assignments as context. Return your suggestions in a clear format.

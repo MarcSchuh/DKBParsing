@@ -4,5 +4,6 @@
   "output_template": "examples/household_template.txt",
   "output_format": "household",
   "openrouter_api_key": "",
-  "system_prompt_file": "examples/system_prompt.txt"
+  "system_prompt_file": "examples/system_prompt.txt",
+  "user_prompt_file": "examples/user_prompt.txt"
 }
