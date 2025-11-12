@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from .openrouter_client import OpenRouterError, call_openrouter
 from .parser import DKBParser
 
 logger = logging.getLogger(__name__)
@@ -119,6 +120,8 @@ def main():
     manual_assignments_file_str = config.get("manual_assignments_file")
     output_template = config.get("output_template")
     output_format = config.get("output_format", "excel")
+    openrouter_api_key = config.get("openrouter_api_key")
+    system_prompt_file_str = config.get("system_prompt_file")
 
     # Ensure category_file is set (required)
     if not args.config:
@@ -171,12 +174,7 @@ def main():
     # Only parse CSV if csv_file is provided
     if not args.csv_file:
         # If no CSV file and no category/manual assignment operations, show help
-        if not (
-            args.add_category
-            or args.add_manual
-            or args.add_search_string
-            or args.remove_search_string
-        ):
+        if not (args.add_category or args.add_manual):
             parser.error(
                 "csv_file is required unless managing categories or manual assignments",
             )
@@ -231,6 +229,60 @@ def main():
         # Output to stdout for user to copy/paste
         logger.info(household_output)
         outputs_printed.append("household")
+
+    # Call OpenRouter if both API key and system prompt file are provided
+    if openrouter_api_key and system_prompt_file_str:
+        if outputs_printed:
+            logger.info("\n" + "=" * 50 + "\n")
+
+        try:
+            system_prompt_file = Path(system_prompt_file_str)
+            if not system_prompt_file.exists():
+                logger.warning(
+                    f"System prompt file {system_prompt_file} does not exist, skipping OpenRouter call",
+                )
+            else:
+                # Convert transactions to dict format for JSON serialization
+                uncategorized_dicts = []
+                for transaction in result.uncategorized_transactions:
+                    uncategorized_dicts.append(
+                        {
+                            "booking_date": transaction.booking_date.strftime(
+                                "%d.%m.%y",
+                            ),
+                            "value_date": transaction.value_date.strftime("%d.%m.%y"),
+                            "status": transaction.status,
+                            "payer": transaction.payer,
+                            "recipient": transaction.recipient,
+                            "purpose": transaction.purpose,
+                            "transaction_type": transaction.transaction_type.value,
+                            "iban": transaction.iban,
+                            "amount": transaction.amount,
+                            "creditor_id": transaction.creditor_id,
+                            "mandate_reference": transaction.mandate_reference,
+                            "customer_reference": transaction.customer_reference,
+                        },
+                    )
+
+                # Get manual assignments from category manager
+                manual_assignments = dkb_parser.category_manager.manual_assignments
+
+                # Call OpenRouter
+                openrouter_response = call_openrouter(
+                    api_key=openrouter_api_key,
+                    system_prompt_file=system_prompt_file,
+                    manual_assignments=manual_assignments,
+                    uncategorized_transactions=uncategorized_dicts,
+                )
+
+                # Display OpenRouter response
+                logger.info("## OpenRouter AI Suggestions:\n")
+                logger.info(openrouter_response)
+
+        except OpenRouterError as e:
+            logger.error(f"OpenRouter API error: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error calling OpenRouter: {e}")
 
 
 if __name__ == "__main__":
