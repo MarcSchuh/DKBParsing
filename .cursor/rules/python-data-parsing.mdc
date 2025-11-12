@@ -1,0 +1,39 @@
+# Python Data Parsing Rules (v1.0.0)
+
+Scope: module in account-movements-parser
+alwaysApply: true
+
+## Directives
+
+- Use type hints for all function signatures and class attributes
+- Prefer Polars over Pandas for performance-critical operations
+- Use Pydantic models for all data validation and serialization
+- Keep parser classes stateless and pure when possible
+- Implement abstract base class for all parsers with consistent interface
+- Handle encoding errors gracefully (utf-8, latin-1, cp1252)
+- Always validate dates with python-dateutil before processing
+- Use context managers for file operations (with statements)
+- Log errors with structured logging (include file path, line number, error type)
+- Never suppress exceptions silently - always log or re-raise
+- Prefer composition over inheritance for parser implementations
+- Keep functions small (<50 lines) and single-purpose
+- Use dataclasses or Pydantic for transaction models
+- Implement __str__ and __repr__ for all model classes
+- Write docstrings following Google style (brief, Args, Returns, Raises)
+
+## Non-Goals
+
+- Do not implement database persistence (out of scope for parser)
+- Do not add web scraping or API integrations
+- Do not add GUI - CLI only via Typer
+
+## Example
+
+Input/Action: Parse CSV bank statement
+Expected behavior:
+```python
+from account_movements_parser.parsers import CSVParser
+from account_movements_parser.models import Transaction
+
+parser = CSVParser()
+transactions: list[Transaction] = parser.parse("statement.csv")

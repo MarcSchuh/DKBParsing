@@ -1,0 +1,32 @@
+# Security & Privacy Rules (v1.0.0)
+
+alwaysApply: true
+
+## Directives
+
+- Never log or print account numbers, card numbers, or PINs
+- Mask sensitive data in error messages (show only last 4 digits)
+- Do not commit sample data files with real account information
+- Use environment variables for any API keys or credentials
+- Validate all user inputs to prevent injection attacks
+- Never include personal financial data in test fixtures
+- Sanitize file paths to prevent directory traversal attacks
+- Avoid storing parsed data in temp directories without cleanup
+- Use secure random for any ID generation (secrets module)
+- Document all sensitive data fields in README
+
+Never include or reveal: account_number, card_number, pin, password, ssn, tax_id
+
+## Non-Goals
+
+- Do not implement user authentication (out of scope)
+- Do not implement network communication
+
+## Example
+
+```python
+# ✅ GOOD: Masked logging
+logger.info(f"Parsed account ****{account[-4:]}")
+
+# ❌ BAD: Exposes full account
+logger.info(f"Parsed account {account}")
