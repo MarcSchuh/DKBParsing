@@ -647,3 +647,527 @@ class TestCLIMain:
 
                     # Verify error was called
                     mock_parser.error.assert_called()
+
+    def test_main_calls_openrouter_when_configured(self):
+        """Test that OpenRouter is called when both API key and system prompt file are set."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+            csv_file = Path(tmpdir) / "transactions.csv"
+            system_prompt_file = Path(tmpdir) / "system_prompt.txt"
+
+            # Create minimal category file
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+
+            # Create minimal manual assignments file
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump({"manual_assignments": []}, f)
+
+            # Create system prompt file
+            system_prompt_file.write_text(
+                "You are a helpful assistant.",
+                encoding="utf-8",
+            )
+
+            # Create minimal CSV file
+            csv_content = (
+                '"Girokonto";"DE87120300001075370831"\n'
+                '"Kontostand vom 01.08.2025:";"9.526,25 €"\n'
+                '""\n'
+                '"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtige*r";"Zahlungsempfänger*in";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)"\n'
+                '"01.08.25";"01.08.25";"Gebucht";"Test";"Unknown";"Test";"Ausgang";"DE123456789";"-10,00"\n'
+            )
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
+            user_prompt_file.write_text("Test prompt", encoding="utf-8")
+
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+                "output_format": "excel",
+                "openrouter_api_key": "test-api-key",
+                "system_prompt_file": str(system_prompt_file),
+                "user_prompt_file": str(user_prompt_file),
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["cli.py", "--config", str(config_file), str(csv_file)],
+                ),
+                patch("dkbparsing.cli.argparse.ArgumentParser") as mock_parser_class,
+            ):
+                mock_parser = Mock()
+                mock_parser_class.return_value = mock_parser
+                mock_args = Mock()
+                mock_args.config = str(config_file)
+                mock_args.csv_file = str(csv_file)
+                mock_args.add_category = None
+                mock_args.add_manual = None
+                mock_args.add_search_string = None
+                mock_args.remove_search_string = None
+                mock_args.verbose = False
+                mock_args.start_date = None
+                mock_args.end_date = None
+                mock_parser.parse_args.return_value = mock_args
+
+                with (
+                    patch(
+                        "dkbparsing.cli.load_config",
+                        return_value=config_data,
+                    ),
+                    patch("dkbparsing.cli.DKBParser") as mock_parser_class,
+                    patch("dkbparsing.cli.call_openrouter") as mock_openrouter,
+                    patch("dkbparsing.cli.logger"),
+                ):
+                    mock_dkb_parser = Mock()
+                    mock_parser_class.return_value = mock_dkb_parser
+
+                    # Mock parsing result
+                    from datetime import datetime
+
+                    from dkbparsing.models import (
+                        ParsingResult,
+                        Transaction,
+                        TransactionType,
+                    )
+
+                    mock_result = ParsingResult(
+                        parsed_transactions=[],
+                        uncategorized_transactions=[
+                            Transaction(
+                                booking_date=datetime(2025, 8, 1),
+                                value_date=datetime(2025, 8, 1),
+                                status="Gebucht",
+                                payer="Test",
+                                recipient="Unknown",
+                                purpose="Test",
+                                transaction_type=TransactionType.EXPENSE,
+                                iban="DE123456789",
+                                amount=-10.0,
+                            ),
+                        ],
+                        category_totals={},
+                        total_income=0.0,
+                        total_expenses=-10.0,
+                    )
+
+                    mock_dkb_parser.parse_file.return_value = mock_result
+                    mock_dkb_parser.format_for_excel.return_value = "Excel output"
+                    mock_dkb_parser.category_manager.manual_assignments = []
+                    mock_openrouter.return_value = "AI suggestions"
+
+                    main()
+
+                    # Verify OpenRouter was called
+                    mock_openrouter.assert_called_once()
+                    call_args = mock_openrouter.call_args
+                    assert call_args[1]["api_key"] == "test-api-key"
+                    assert call_args[1]["system_prompt_file"] == system_prompt_file
+                    assert call_args[1]["manual_assignments"] == []
+                    assert len(call_args[1]["uncategorized_transactions"]) == 1
+                    # Verify user_prompt_file was passed (should be a Path object)
+                    assert call_args[1]["user_prompt_file"] is not None
+                    assert isinstance(call_args[1]["user_prompt_file"], Path)
+
+    def test_main_skips_openrouter_when_not_configured(self):
+        """Test that OpenRouter is not called when API key or system prompt file is missing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+            csv_file = Path(tmpdir) / "transactions.csv"
+
+            # Create minimal files
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump({"manual_assignments": []}, f)
+
+            csv_content = (
+                '"Girokonto";"DE87120300001075370831"\n'
+                '"Kontostand vom 01.08.2025:";"9.526,25 €"\n'
+                '""\n'
+                '"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtige*r";"Zahlungsempfänger*in";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)"\n'
+                '"01.08.25";"01.08.25";"Gebucht";"Test";"Unknown";"Test";"Ausgang";"DE123456789";"-10,00"\n'
+            )
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+                "output_format": "excel",
+                # No openrouter_api_key or system_prompt_file
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["cli.py", "--config", str(config_file), str(csv_file)],
+                ),
+                patch("dkbparsing.cli.argparse.ArgumentParser") as mock_parser_class,
+            ):
+                mock_parser = Mock()
+                mock_parser_class.return_value = mock_parser
+                mock_args = Mock()
+                mock_args.config = str(config_file)
+                mock_args.csv_file = str(csv_file)
+                mock_args.add_category = None
+                mock_args.add_manual = None
+                mock_args.add_search_string = None
+                mock_args.remove_search_string = None
+                mock_args.verbose = False
+                mock_args.start_date = None
+                mock_args.end_date = None
+                mock_parser.parse_args.return_value = mock_args
+
+                with (
+                    patch(
+                        "dkbparsing.cli.load_config",
+                        return_value=config_data,
+                    ),
+                    patch("dkbparsing.cli.DKBParser") as mock_parser_class,
+                    patch("dkbparsing.cli.call_openrouter") as mock_openrouter,
+                    patch("dkbparsing.cli.logger"),
+                ):
+                    mock_dkb_parser = Mock()
+                    mock_parser_class.return_value = mock_dkb_parser
+
+                    from dkbparsing.models import ParsingResult
+
+                    mock_result = ParsingResult(
+                        parsed_transactions=[],
+                        uncategorized_transactions=[],
+                        category_totals={},
+                        total_income=0.0,
+                        total_expenses=0.0,
+                    )
+
+                    mock_dkb_parser.parse_file.return_value = mock_result
+                    mock_dkb_parser.format_for_excel.return_value = "Excel output"
+
+                    main()
+
+                    # Verify OpenRouter was NOT called
+                    mock_openrouter.assert_not_called()
+
+    def test_main_warns_on_partial_openrouter_config(self):
+        """Test that warning is shown when OpenRouter is partially configured."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+            csv_file = Path(tmpdir) / "transactions.csv"
+
+            # Create minimal files
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump({"manual_assignments": []}, f)
+
+            csv_content = (
+                '"Girokonto";"DE87120300001075370831"\n'
+                '"Kontostand vom 01.08.2025:";"9.526,25 €"\n'
+                '""\n'
+                '"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtige*r";"Zahlungsempfänger*in";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)"\n'
+                '"01.08.25";"01.08.25";"Gebucht";"Test";"Unknown";"Test";"Ausgang";"DE123456789";"-10,00"\n'
+            )
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            # Test with only API key
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+                "output_format": "excel",
+                "openrouter_api_key": "test-api-key",
+                # Missing system_prompt_file and user_prompt_file
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["cli.py", "--config", str(config_file), str(csv_file)],
+                ),
+                patch("dkbparsing.cli.argparse.ArgumentParser") as mock_parser_class,
+            ):
+                mock_parser = Mock()
+                mock_parser_class.return_value = mock_parser
+                mock_args = Mock()
+                mock_args.config = str(config_file)
+                mock_args.csv_file = str(csv_file)
+                mock_args.add_category = None
+                mock_args.add_manual = None
+                mock_args.add_search_string = None
+                mock_args.remove_search_string = None
+                mock_args.verbose = False
+                mock_args.start_date = None
+                mock_args.end_date = None
+                mock_parser.parse_args.return_value = mock_args
+
+                with (
+                    patch(
+                        "dkbparsing.cli.load_config",
+                        return_value=config_data,
+                    ),
+                    patch("dkbparsing.cli.DKBParser") as mock_parser_class,
+                    patch("dkbparsing.cli.call_openrouter") as mock_openrouter,
+                    patch("dkbparsing.cli.logger") as mock_logger,
+                ):
+                    mock_dkb_parser = Mock()
+                    mock_parser_class.return_value = mock_dkb_parser
+
+                    from dkbparsing.models import ParsingResult
+
+                    mock_result = ParsingResult(
+                        parsed_transactions=[],
+                        uncategorized_transactions=[],
+                        category_totals={},
+                        total_income=0.0,
+                        total_expenses=0.0,
+                    )
+
+                    mock_dkb_parser.parse_file.return_value = mock_result
+                    mock_dkb_parser.format_for_excel.return_value = "Excel output"
+
+                    main()
+
+                    # Verify warning was logged
+                    warning_calls = [
+                        call
+                        for call in mock_logger.warning.call_args_list
+                        if "OpenRouter configuration incomplete" in str(call)
+                    ]
+                    assert len(warning_calls) > 0
+
+                    # Verify OpenRouter was NOT called
+                    mock_openrouter.assert_not_called()
+
+    def test_main_no_warning_when_no_openrouter_config(self):
+        """Test that no warning is shown when no OpenRouter config is provided."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+            csv_file = Path(tmpdir) / "transactions.csv"
+
+            # Create minimal files
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump({"manual_assignments": []}, f)
+
+            csv_content = (
+                '"Girokonto";"DE87120300001075370831"\n'
+                '"Kontostand vom 01.08.2025:";"9.526,25 €"\n'
+                '""\n'
+                '"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtige*r";"Zahlungsempfänger*in";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)"\n'
+                '"01.08.25";"01.08.25";"Gebucht";"Test";"Unknown";"Test";"Ausgang";"DE123456789";"-10,00"\n'
+            )
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+                "output_format": "excel",
+                # No OpenRouter config at all
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["cli.py", "--config", str(config_file), str(csv_file)],
+                ),
+                patch("dkbparsing.cli.argparse.ArgumentParser") as mock_parser_class,
+            ):
+                mock_parser = Mock()
+                mock_parser_class.return_value = mock_parser
+                mock_args = Mock()
+                mock_args.config = str(config_file)
+                mock_args.csv_file = str(csv_file)
+                mock_args.add_category = None
+                mock_args.add_manual = None
+                mock_args.add_search_string = None
+                mock_args.remove_search_string = None
+                mock_args.verbose = False
+                mock_args.start_date = None
+                mock_args.end_date = None
+                mock_parser.parse_args.return_value = mock_args
+
+                with (
+                    patch(
+                        "dkbparsing.cli.load_config",
+                        return_value=config_data,
+                    ),
+                    patch("dkbparsing.cli.DKBParser") as mock_parser_class,
+                    patch("dkbparsing.cli.call_openrouter") as mock_openrouter,
+                    patch("dkbparsing.cli.logger") as mock_logger,
+                ):
+                    mock_dkb_parser = Mock()
+                    mock_parser_class.return_value = mock_dkb_parser
+
+                    from dkbparsing.models import ParsingResult
+
+                    mock_result = ParsingResult(
+                        parsed_transactions=[],
+                        uncategorized_transactions=[],
+                        category_totals={},
+                        total_income=0.0,
+                        total_expenses=0.0,
+                    )
+
+                    mock_dkb_parser.parse_file.return_value = mock_result
+                    mock_dkb_parser.format_for_excel.return_value = "Excel output"
+
+                    main()
+
+                    # Verify no warning about OpenRouter was logged
+                    warning_calls = [
+                        call
+                        for call in mock_logger.warning.call_args_list
+                        if "OpenRouter" in str(call)
+                    ]
+                    assert len(warning_calls) == 0
+
+                    # Verify OpenRouter was NOT called
+                    mock_openrouter.assert_not_called()
+
+    def test_main_calls_openrouter_with_user_prompt_file(self):
+        """Test that OpenRouter is called with user prompt file when configured."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+            config_file = Path(tmpdir) / "config.json"
+            csv_file = Path(tmpdir) / "transactions.csv"
+            system_prompt_file = Path(tmpdir) / "system_prompt.txt"
+            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
+
+            # Create minimal category file
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+
+            # Create minimal manual assignments file
+            with open(manual_file, "w", encoding="utf-8") as f:
+                json.dump({"manual_assignments": []}, f)
+
+            # Create system prompt file
+            system_prompt_file.write_text(
+                "You are a helpful assistant.",
+                encoding="utf-8",
+            )
+
+            # Create user prompt file
+            user_prompt_file = Path(tmpdir) / "user_prompt.txt"
+            user_prompt_file.write_text(
+                "Custom prompt: {manual_assignments} {uncategorized_transactions}",
+                encoding="utf-8",
+            )
+
+            # Create minimal CSV file
+            csv_content = (
+                '"Girokonto";"DE87120300001075370831"\n'
+                '"Kontostand vom 01.08.2025:";"9.526,25 €"\n'
+                '""\n'
+                '"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtige*r";"Zahlungsempfänger*in";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)"\n'
+                '"01.08.25";"01.08.25";"Gebucht";"Test";"Unknown";"Test";"Ausgang";"DE123456789";"-10,00"\n'
+            )
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            config_data = {
+                "category_config": str(category_file),
+                "manual_assignments_file": str(manual_file),
+                "output_format": "excel",
+                "openrouter_api_key": "test-api-key",
+                "system_prompt_file": str(system_prompt_file),
+                "user_prompt_file": str(user_prompt_file),
+            }
+
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f)
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["cli.py", "--config", str(config_file), str(csv_file)],
+                ),
+                patch("dkbparsing.cli.argparse.ArgumentParser") as mock_parser_class,
+            ):
+                mock_parser = Mock()
+                mock_parser_class.return_value = mock_parser
+                mock_args = Mock()
+                mock_args.config = str(config_file)
+                mock_args.csv_file = str(csv_file)
+                mock_args.add_category = None
+                mock_args.add_manual = None
+                mock_args.add_search_string = None
+                mock_args.remove_search_string = None
+                mock_args.verbose = False
+                mock_args.start_date = None
+                mock_args.end_date = None
+                mock_parser.parse_args.return_value = mock_args
+
+                with (
+                    patch(
+                        "dkbparsing.cli.load_config",
+                        return_value=config_data,
+                    ),
+                    patch("dkbparsing.cli.DKBParser") as mock_parser_class,
+                    patch("dkbparsing.cli.call_openrouter") as mock_openrouter,
+                    patch("dkbparsing.cli.logger"),
+                ):
+                    mock_dkb_parser = Mock()
+                    mock_parser_class.return_value = mock_dkb_parser
+
+                    from datetime import datetime
+
+                    from dkbparsing.models import (
+                        ParsingResult,
+                        Transaction,
+                        TransactionType,
+                    )
+
+                    mock_result = ParsingResult(
+                        parsed_transactions=[],
+                        uncategorized_transactions=[
+                            Transaction(
+                                booking_date=datetime(2025, 8, 1),
+                                value_date=datetime(2025, 8, 1),
+                                status="Gebucht",
+                                payer="Test",
+                                recipient="Unknown",
+                                purpose="Test",
+                                transaction_type=TransactionType.EXPENSE,
+                                iban="DE123456789",
+                                amount=-10.0,
+                            ),
+                        ],
+                        category_totals={},
+                        total_income=0.0,
+                        total_expenses=-10.0,
+                    )
+
+                    mock_dkb_parser.parse_file.return_value = mock_result
+                    mock_dkb_parser.format_for_excel.return_value = "Excel output"
+                    mock_dkb_parser.category_manager.manual_assignments = []
+                    mock_openrouter.return_value = "AI suggestions"
+
+                    main()
+
+                    # Verify OpenRouter was called with user_prompt_file
+                    mock_openrouter.assert_called_once()
+                    call_args = mock_openrouter.call_args
+                    assert call_args[1]["user_prompt_file"] == user_prompt_file
