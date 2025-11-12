@@ -165,38 +165,49 @@ class CategoryManager:
 
         for category in self.categories.values():
             matches = []
+            iban_matches = []
+            text_matches = []
 
-            # Check IBAN patterns first (if IBAN is present)
+            # Check IBAN patterns (if IBAN is present and category has IBAN patterns)
             if transaction.iban and transaction.iban.strip() and category.iban_patterns:
                 for iban_pattern in category.iban_patterns:
                     # IBAN patterns can be exact matches or regex patterns
                     # Try exact match first (case-insensitive)
                     if iban_pattern.upper() == transaction.iban.upper():
-                        matches.append(f"iban: {iban_pattern}")
+                        iban_matches.append(f"iban: {iban_pattern}")
                     # Try regex match
                     else:
                         try:
                             if re.search(iban_pattern, transaction.iban, re.IGNORECASE):
-                                matches.append(f"iban: {iban_pattern}")
+                                iban_matches.append(f"iban: {iban_pattern}")
                         except re.error:
                             continue
 
             # Check search strings
             for search_string in category.search_strings:
                 if search_string.lower() in search_text:
-                    matches.append(search_string)
+                    text_matches.append(search_string)
 
             # Check regex patterns
             if category.regex_patterns:
                 for pattern in category.regex_patterns:
                     try:
                         if re.search(pattern, search_text, re.IGNORECASE):
-                            matches.append(f"regex: {pattern}")
+                            text_matches.append(f"regex: {pattern}")
                     except re.error:
                         continue
 
-            if matches:
-                return category, matches
+            # If category has IBAN patterns, both IBAN and text matches are required
+            # But if transaction has no IBAN, ignore IBAN patterns (backward compatibility)
+            if category.iban_patterns and transaction.iban and transaction.iban.strip():
+                if iban_matches and text_matches:
+                    matches = iban_matches + text_matches
+                    return category, matches
+            # If no IBAN patterns OR transaction has no IBAN, text matches are sufficient
+            else:
+                if text_matches:
+                    matches = text_matches
+                    return category, matches
 
         return None, []
 

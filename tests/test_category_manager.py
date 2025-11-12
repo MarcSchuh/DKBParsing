@@ -866,7 +866,7 @@ class TestCategorizeTransaction:
             assert result_category is not None
 
     def test_categorize_transaction_iban_exact_match(self):
-        """Test matching via exact IBAN pattern."""
+        """Test matching via exact IBAN pattern - requires both IBAN and text match."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -876,7 +876,7 @@ class TestCategorizeTransaction:
             category = Category(
                 name="paypal",
                 display_name="PayPal",
-                search_strings=[],
+                search_strings=["PayPal"],  # Required: both IBAN and text must match
                 iban_patterns=["LU89751000135104200E"],
             )
             manager.add_category(category)
@@ -897,9 +897,10 @@ class TestCategorizeTransaction:
 
             assert result_category == category
             assert any("iban:" in match for match in matches)
+            assert "PayPal" in matches
 
     def test_categorize_transaction_iban_regex_match(self):
-        """Test matching via IBAN regex pattern."""
+        """Test matching via IBAN regex pattern - requires both IBAN and text match."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -909,7 +910,7 @@ class TestCategorizeTransaction:
             category = Category(
                 name="amazon",
                 display_name="Amazon",
-                search_strings=[],
+                search_strings=["AMAZON"],  # Required: both IBAN and text must match
                 iban_patterns=[r"DE8730030880\d+"],
             )
             manager.add_category(category)
@@ -930,9 +931,10 @@ class TestCategorizeTransaction:
 
             assert result_category == category
             assert any("iban:" in match for match in matches)
+            assert "AMAZON" in matches
 
     def test_categorize_transaction_iban_case_insensitive(self):
-        """Test that IBAN matching is case-insensitive."""
+        """Test that IBAN matching is case-insensitive - requires both IBAN and text match."""
         with tempfile.TemporaryDirectory() as tmpdir:
             category_file = Path(tmpdir) / "categories.json"
             manual_file = Path(tmpdir) / "manual.json"
@@ -942,7 +944,7 @@ class TestCategorizeTransaction:
             category = Category(
                 name="test",
                 display_name="Test",
-                search_strings=[],
+                search_strings=["Test"],  # Required: both IBAN and text must match
                 iban_patterns=["lu89751000135104200e"],  # Lowercase
             )
             manager.add_category(category)
@@ -963,6 +965,7 @@ class TestCategorizeTransaction:
 
             assert result_category == category
             assert any("iban:" in match for match in matches)
+            assert "Test" in matches
 
     def test_categorize_transaction_iban_no_match(self):
         """Test when IBAN doesn't match any pattern."""
@@ -975,7 +978,7 @@ class TestCategorizeTransaction:
             category = Category(
                 name="paypal",
                 display_name="PayPal",
-                search_strings=[],
+                search_strings=["PayPal"],
                 iban_patterns=["LU89751000135104200E"],
             )
             manager.add_category(category)
@@ -994,6 +997,41 @@ class TestCategorizeTransaction:
 
             result_category, matches = manager.categorize_transaction(transaction)
 
+            # Should not match because IBAN doesn't match (even though text would match)
+            assert result_category is None
+            assert matches == []
+
+    def test_categorize_transaction_iban_no_text_match(self):
+        """Test that IBAN pattern alone is not sufficient - text match is also required."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="paypal",
+                display_name="PayPal",
+                search_strings=["PayPal"],  # Text must also match
+                iban_patterns=["LU89751000135104200E"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="Different Recipient",  # No "PayPal" in text
+                purpose="Different Purpose",
+                transaction_type=TransactionType.EXPENSE,
+                iban="LU89751000135104200E",  # IBAN matches, but text doesn't
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            # Should not match because text doesn't match (even though IBAN matches)
             assert result_category is None
             assert matches == []
 
