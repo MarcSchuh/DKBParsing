@@ -373,9 +373,9 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == "2000,0"
-            assert lines[2] == "-800,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == "2000,0"
+            assert lines[3] == "-800,0"
         finally:
             Path(template_path).unlink()
 
@@ -402,8 +402,8 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == "2000,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == "2000,0"
         finally:
             Path(template_path).unlink()
 
@@ -431,9 +431,9 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == ""  # Missing category should be empty
-            assert lines[2] == "2000,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == ""  # Missing category should be empty
+            assert lines[3] == "2000,0"
         finally:
             Path(template_path).unlink()
 
@@ -461,9 +461,9 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == ""  # Empty line preserved
-            assert lines[2] == "2000,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == ""  # Empty line preserved
+            assert lines[3] == "2000,0"
         finally:
             Path(template_path).unlink()
 
@@ -490,8 +490,8 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == ""  # Zero amount should be empty
+            assert lines[1] == "-50,25"
+            assert lines[2] == ""  # Zero amount should be empty
         finally:
             Path(template_path).unlink()
 
@@ -640,8 +640,8 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == "2000,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == "2000,0"
         finally:
             Path(template_path).unlink()
 
@@ -669,8 +669,8 @@ class TestHouseholdFormatter:
             output = formatter.format_household_output(result)
 
             lines = output.split("\n")
-            assert lines[0] == "-50,25"
-            assert lines[1] == "2000,0"
+            assert lines[1] == "-50,25"
+            assert lines[2] == "2000,0"
         finally:
             Path(template_path).unlink()
 
