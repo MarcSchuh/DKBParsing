@@ -13,8 +13,10 @@ build/
 venv/
 env/
 
-# Cursor IDE
+# IDEs
 .cursor/
+.vscode/
+.idea/
 
 # mypy
 .mypy_cache/

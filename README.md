@@ -103,6 +103,30 @@ Categories are defined in a JSON file with search strings and optional regex pat
 }
 ```
 
+### Manual assignemnts
+For transactions that you would like to assign only once to a categoryuse manual_assigments. 
+An example can be found at `examples/manual_assigments.json`:
+
+```json
+{
+  "manual_assignments": [
+    {
+      "date": "01.08.22",
+      "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A",
+      "purpose": "123",
+      "category": "Hardware"
+    },
+    {
+      "date": "31.07.22",
+      "recipient": "AMAZON PAYMENTS EUROPE S.C.A.",
+      "purpose": "303-",
+      "category": "Hardware"
+    }
+  ]
+}
+```
+The defined category must exist in your category file. 
+
 ### Basic Usage
 
 **Parse a CSV file:**
@@ -148,8 +172,6 @@ Generates output based on a template file. The template should contain category 
 Example template (`household_template.txt`):
 ```
 Einkommen
-Finanzamt
-
 
 
 Miete
