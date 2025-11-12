@@ -865,6 +865,244 @@ class TestCategorizeTransaction:
             assert result_category in [category1, category2]
             assert result_category is not None
 
+    def test_categorize_transaction_iban_exact_match(self):
+        """Test matching via exact IBAN pattern - requires both IBAN and text match."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="paypal",
+                display_name="PayPal",
+                search_strings=["PayPal"],  # Required: both IBAN and text must match
+                iban_patterns=["LU89751000135104200E"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Marc Schuh",
+                recipient="PayPal Europe S.a.r.l. et Cie S.C.A",
+                purpose="Test transaction",
+                transaction_type=TransactionType.EXPENSE,
+                iban="LU89751000135104200E",
+                amount=-24.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            assert result_category == category
+            assert any("iban:" in match for match in matches)
+            assert "PayPal" in matches
+
+    def test_categorize_transaction_iban_regex_match(self):
+        """Test matching via IBAN regex pattern - requires both IBAN and text match."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="amazon",
+                display_name="Amazon",
+                search_strings=["AMAZON"],  # Required: both IBAN and text must match
+                iban_patterns=[r"DE8730030880\d+"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 7, 31),
+                value_date=datetime(2024, 7, 31),
+                status="Gebucht",
+                payer="Marc Schuh",
+                recipient="AMAZON PAYMENTS EUROPE S.C.A.",
+                purpose="Test transaction",
+                transaction_type=TransactionType.EXPENSE,
+                iban="DE87300308801908262006",
+                amount=-64.97,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            assert result_category == category
+            assert any("iban:" in match for match in matches)
+            assert "AMAZON" in matches
+
+    def test_categorize_transaction_iban_case_insensitive(self):
+        """Test that IBAN matching is case-insensitive - requires both IBAN and text match."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="test",
+                display_name="Test",
+                search_strings=["Test"],  # Required: both IBAN and text must match
+                iban_patterns=["lu89751000135104200e"],  # Lowercase
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="Test",
+                purpose="Test",
+                transaction_type=TransactionType.EXPENSE,
+                iban="LU89751000135104200E",  # Uppercase
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            assert result_category == category
+            assert any("iban:" in match for match in matches)
+            assert "Test" in matches
+
+    def test_categorize_transaction_iban_no_match(self):
+        """Test when IBAN doesn't match any pattern."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="paypal",
+                display_name="PayPal",
+                search_strings=["PayPal"],
+                iban_patterns=["LU89751000135104200E"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="Test",
+                purpose="Test",
+                transaction_type=TransactionType.EXPENSE,
+                iban="DE87300308801908262006",  # Different IBAN
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            # Should not match because IBAN doesn't match (even though text would match)
+            assert result_category is None
+            assert matches == []
+
+    def test_categorize_transaction_iban_no_text_match(self):
+        """Test that IBAN pattern alone is not sufficient - text match is also required."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="paypal",
+                display_name="PayPal",
+                search_strings=["PayPal"],  # Text must also match
+                iban_patterns=["LU89751000135104200E"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="Different Recipient",  # No "PayPal" in text
+                purpose="Different Purpose",
+                transaction_type=TransactionType.EXPENSE,
+                iban="LU89751000135104200E",  # IBAN matches, but text doesn't
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            # Should not match because text doesn't match (even though IBAN matches)
+            assert result_category is None
+            assert matches == []
+
+    def test_categorize_transaction_iban_empty_iban(self):
+        """Test that empty IBAN doesn't cause issues."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="test",
+                display_name="Test",
+                search_strings=["test"],
+                iban_patterns=["DE.*"],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="test",
+                purpose="test",
+                transaction_type=TransactionType.EXPENSE,
+                iban="",  # Empty IBAN
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            # Should match via search_string, not IBAN
+            assert result_category == category
+            assert "test" in matches
+            assert not any("iban:" in match for match in matches)
+
+    def test_categorize_transaction_iban_in_search_text(self):
+        """Test that IBAN is included in search text for search_string matching."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager = CategoryManager(category_file, manual_file)
+
+            category = Category(
+                name="test",
+                display_name="Test",
+                search_strings=["DE87300308801908262006"],  # IBAN as search string
+                iban_patterns=[],
+            )
+            manager.add_category(category)
+
+            transaction = Transaction(
+                booking_date=datetime(2024, 8, 1),
+                value_date=datetime(2024, 8, 1),
+                status="Gebucht",
+                payer="Test",
+                recipient="Test",
+                purpose="Test",
+                transaction_type=TransactionType.EXPENSE,
+                iban="DE87300308801908262006",
+                amount=-10.00,
+            )
+
+            result_category, matches = manager.categorize_transaction(transaction)
+
+            assert result_category == category
+            assert "DE87300308801908262006" in matches
+
 
 class TestCategorizeTransactions:
     """Tests for categorizing transaction lists."""
@@ -1255,6 +1493,71 @@ class TestSaveLoadCategories:
 
             assert manager2.categories["groceries"].expected_max_amount == 100.00
             assert manager2.categories["rent"].expected_max_amount is None
+
+    def test_save_load_iban_patterns(self):
+        """Test that iban_patterns is saved and loaded correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            manager1 = CategoryManager(category_file, manual_file)
+
+            category1 = Category(
+                name="paypal",
+                display_name="PayPal",
+                search_strings=["PayPal"],
+                iban_patterns=["LU89751000135104200E", r"LU\d+"],
+            )
+            category2 = Category(
+                name="amazon",
+                display_name="Amazon",
+                search_strings=["Amazon"],
+                # No iban_patterns
+            )
+
+            manager1.add_category(category1)
+            manager1.add_category(category2)
+
+            # Create new manager and load
+            manager2 = CategoryManager(category_file, manual_file)
+
+            assert manager2.categories["paypal"].iban_patterns == [
+                "LU89751000135104200E",
+                r"LU\d+",
+            ]
+            assert manager2.categories["amazon"].iban_patterns == []
+
+    def test_load_categories_with_iban_patterns(self):
+        """Test loading categories with iban_patterns from file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            category_file = Path(tmpdir) / "categories.json"
+            manual_file = Path(tmpdir) / "manual.json"
+
+            category_data = {
+                "paypal": {
+                    "display_name": "PayPal",
+                    "search_strings": ["PayPal"],
+                    "regex_patterns": [],
+                    "iban_patterns": ["LU89751000135104200E"],
+                },
+                "amazon": {
+                    "display_name": "Amazon",
+                    "search_strings": ["Amazon"],
+                    "regex_patterns": [],
+                    # No iban_patterns field
+                },
+            }
+
+            with open(category_file, "w", encoding="utf-8") as f:
+                json.dump(category_data, f)
+
+            manager = CategoryManager(category_file, manual_file)
+
+            assert len(manager.categories) == 2
+            assert manager.categories["paypal"].iban_patterns == [
+                "LU89751000135104200E",
+            ]
+            assert manager.categories["amazon"].iban_patterns == []
 
 
 class TestSaveLoadManualAssignments:

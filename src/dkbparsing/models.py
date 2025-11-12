@@ -78,11 +78,14 @@ class Category:
     display_name: str
     search_strings: list[str]
     regex_patterns: list[str] | None = None
+    iban_patterns: list[str] | None = None
     expected_max_amount: float | None = None
 
     def __post_init__(self):
         if self.regex_patterns is None:
             object.__setattr__(self, "regex_patterns", [])
+        if self.iban_patterns is None:
+            object.__setattr__(self, "iban_patterns", [])
 
 
 @dataclass

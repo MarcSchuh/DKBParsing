@@ -158,27 +158,56 @@ class CategoryManager:
             return manual_category, ["manual assignment"]
 
         search_text = f"{transaction.value_date.strftime('%d.%m.%y')} {transaction.recipient} {transaction.purpose}"
+        # Include IBAN in search text if present
+        if transaction.iban and transaction.iban.strip():
+            search_text = f"{search_text} {transaction.iban}"
         search_text = search_text.lower()
 
         for category in self.categories.values():
             matches = []
+            iban_matches = []
+            text_matches = []
+
+            # Check IBAN patterns (if IBAN is present and category has IBAN patterns)
+            if transaction.iban and transaction.iban.strip() and category.iban_patterns:
+                for iban_pattern in category.iban_patterns:
+                    # IBAN patterns can be exact matches or regex patterns
+                    # Try exact match first (case-insensitive)
+                    if iban_pattern.upper() == transaction.iban.upper():
+                        iban_matches.append(f"iban: {iban_pattern}")
+                    # Try regex match
+                    else:
+                        try:
+                            if re.search(iban_pattern, transaction.iban, re.IGNORECASE):
+                                iban_matches.append(f"iban: {iban_pattern}")
+                        except re.error:
+                            continue
 
             # Check search strings
             for search_string in category.search_strings:
                 if search_string.lower() in search_text:
-                    matches.append(search_string)
+                    text_matches.append(search_string)
 
             # Check regex patterns
             if category.regex_patterns:
                 for pattern in category.regex_patterns:
                     try:
                         if re.search(pattern, search_text, re.IGNORECASE):
-                            matches.append(f"regex: {pattern}")
+                            text_matches.append(f"regex: {pattern}")
                     except re.error:
                         continue
 
-            if matches:
-                return category, matches
+            # If category has IBAN patterns, both IBAN and text matches are required
+            # But if transaction has no IBAN, ignore IBAN patterns (backward compatibility)
+            if category.iban_patterns and transaction.iban and transaction.iban.strip():
+                if iban_matches and text_matches:
+                    matches = iban_matches + text_matches
+                    return category, matches
+            # If no IBAN patterns OR transaction has no IBAN, text matches are sufficient
+            else:
+                if text_matches:
+                    matches = text_matches
+                    return category, matches
 
         return None, []
 
@@ -216,6 +245,8 @@ class CategoryManager:
                 "search_strings": category.search_strings,
                 "regex_patterns": category.regex_patterns,
             }
+            if category.iban_patterns:
+                category_data["iban_patterns"] = category.iban_patterns
             if category.expected_max_amount is not None:
                 category_data["expected_max_amount"] = category.expected_max_amount
             data[name] = category_data
@@ -244,6 +275,7 @@ class CategoryManager:
                     display_name=category_data.get("display_name", name),
                     search_strings=category_data.get("search_strings", []),
                     regex_patterns=category_data.get("regex_patterns", []),
+                    iban_patterns=category_data.get("iban_patterns", []),
                     expected_max_amount=category_data.get("expected_max_amount"),
                 )
                 self.categories[name] = category
