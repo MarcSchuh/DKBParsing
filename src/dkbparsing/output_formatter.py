@@ -186,11 +186,10 @@ class HouseholdFormatter:
                 amount = category_amounts[original_name]
                 output_lines.append(self._format_amount(amount))
             else:
-                # Category not found, output empty
-                logger.warning(f"Category '{line}' not found in category_amounts")
+                logger.debug(f"Category '{line}' not found in category_amounts")
                 output_lines.append("")
 
-        return "\n".join(output_lines)
+        return "The lines below are for your excel sheet\n" + "\n".join(output_lines)
 
     def _format_amount(self, amount: float) -> str:
         """Format amount for German Excel (comma as decimal separator)."""
