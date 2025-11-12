@@ -232,6 +232,28 @@ class TestCategory:
 
         assert category.regex_patterns == []
 
+    def test_category_with_iban_patterns(self):
+        """Test creating a Category with IBAN patterns."""
+        category = Category(
+            name="paypal",
+            display_name="PayPal",
+            search_strings=["PayPal"],
+            iban_patterns=["LU89751000135104200E", "DE.*"],
+        )
+
+        assert category.iban_patterns == ["LU89751000135104200E", "DE.*"]
+
+    def test_category_iban_patterns_default(self):
+        """Test that iban_patterns defaults to empty list if None."""
+        category = Category(
+            name="test",
+            display_name="Test",
+            search_strings=["test"],
+            iban_patterns=None,
+        )
+
+        assert category.iban_patterns == []
+
 
 class TestParsedTransaction:
     """Tests for ParsedTransaction dataclass."""

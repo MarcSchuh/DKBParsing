@@ -35,5 +35,16 @@
     "regex_patterns": [
       "PayPal.*Restaurant.*PP\\.7905\\.PP"
     ]
+  },
+  "amazon": {
+    "display_name": "Amazon",
+    "search_strings": [
+      "AMAZON PAYMENTS",
+      "AMZN Mktp"
+    ],
+    "regex_patterns": [],
+    "iban_patterns": [
+      "DE12300308801908262123"
+    ]
   }
 }
