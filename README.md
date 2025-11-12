@@ -104,7 +104,7 @@ Categories are defined in a JSON file with search strings and optional regex pat
 ```
 
 ### Manual assignemnts
-For transactions that you would like to assign only once to a categoryuse manual_assigments. 
+For transactions that you would like to assign only once to a categoryuse manual_assigments.
 An example can be found at `examples/manual_assigments.json`:
 
 ```json
@@ -125,7 +125,7 @@ An example can be found at `examples/manual_assigments.json`:
   ]
 }
 ```
-The defined category must exist in your category file. 
+The defined category must exist in your category file.
 
 ### Basic Usage
 
