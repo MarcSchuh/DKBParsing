@@ -4,70 +4,27 @@ A Python tool for parsing and categorizing DKB (Deutsche Kreditbank) account sta
 Automatically categorizes transactions using search strings and regex patterns, supports manual assignments, and generates Excel-compatible output for easy integration into your budget spreadsheets.
 It also offers AI-powered categorization suggestions using OpenRouter API to help categorize unknown transactions based on existing patterns.
 
+## Standalone Executable (Recommended)
+
+Download the pre-built executable from the [latest release](https://github.com/yourusername/DKBParsing/releases/latest) - no installation required!
+
+```bash
+# Make executable
+chmod +x dkbparsing
+
+# Run
+./dkbparsing /path/to/accounting.csv --config /path/to/cli_config.json \
+  --start-date 01.07.25 --end-date 31.07.25
+```
+
+**Note:** Currently available for Linux only.
+
 ## Getting Ready
 
-### Prerequisites
-
-This project uses [uv](https://github.com/astral-sh/uv), a fast Python package installer and resolver.
-
-**Install uv** (if not already installed):
+Install and sync dependencies:
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### Installation
-
-```bash
-# Sync dependencies and install the package (includes dev dependencies)
-uv sync
-
-# Or sync only production dependencies
-uv sync --no-dev
-```
-
-This will create a virtual environment and install all dependencies from `pyproject.toml`.
-
-## Development
-
-### Pre-commit Hooks
-
-The project uses pre-commit hooks to ensure code quality before commits. These hooks run:
-- **Ruff** for linting and formatting
-- **MyPy** for type checking
-- Various file checks (YAML, JSON, TOML validation, trailing whitespace, etc.)
-
-**Setup:**
-```bash
-# Install pre-commit hooks
-uv run pre-commit install
-
-# Manually run all hooks
-uv run pre-commit run --all-files
-```
-
-### Testing
-
-Run the test suite with pytest:
-```bash
-uv run pytest tests/ -v
-```
-
-Run tests with coverage:
-```bash
-uv run pytest tests/ --cov=src/dkbparsing --cov-report=html
-```
-
-## Maintenance
-
-### Updating Dependencies
-
-To update all dependencies to their latest compatible versions:
-```bash
-uv lock --upgrade
 uv sync
 ```
-
-For installing pre-commit hooks, tests etc. ask your LLM-agent.
 
 ## Usage
 
@@ -262,13 +219,7 @@ You can copy this directly into your Excel spreadsheet!
 
 ### Examples
 
-See the `examples/` directory for:
-- Sample category configuration (`categories.json`)
-- Example CLI configuration (`cli_config.json`)
-- Household budget template (`household_template.txt`)
-- Manual assignments example (`manual_assignments.json`)
-- System prompt for AI categorization (`system_prompt.txt`)
-- User prompt template for AI categorization (`user_prompt.txt`)
+See `examples/` directory for sample configurations: categories, CLI config, templates, manual assignments, and AI prompts.
 
 ## License
 

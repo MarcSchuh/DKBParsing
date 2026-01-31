@@ -35,10 +35,16 @@ jobs:
           uv lock --upgrade
           uv sync --all-groups
 
+      - name: Bump version
+        run: |
+          BUMPED_VERSION=$(awk -F'"' '/^version =/ {old=$2; split(old, v, "."); v[3]++; printf "%s.%s.%s", v[1], v[2], v[3]}' pyproject.toml)
+          sed -i "s/^version = .*/version = \"$BUMPED_VERSION\"/" pyproject.toml
+          echo "Bumped version to: $BUMPED_VERSION"
+
       - name: Check for changes
         id: check-changes
         run: |
-          git add uv.lock
+          git add uv.lock pyproject.toml
           if git diff --staged --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
