@@ -22,17 +22,9 @@ uv run pyinstaller --onefile \
     --name dkbparsing \
     --hidden-import dkbparsing \
     --hidden-import dkbparsing.cli \
-    --hidden-import dkbparsing.parser \
-    --hidden-import dkbparsing.csv_parser \
-    --hidden-import dkbparsing.category_manager \
-    --hidden-import dkbparsing.output_formatter \
-    --hidden-import dkbparsing.models \
-    --hidden-import dkbparsing.openrouter_client \
-    --hidden-import pandas \
-    --hidden-import openai \
     --strip \
     --upx-dir=/usr/bin \
-    src/dkbparsing/cli.py
+    src/dkbparsing/__main__.py
 
 # Check if build was successful
 if [ -f "dist/dkbparsing" ]; then

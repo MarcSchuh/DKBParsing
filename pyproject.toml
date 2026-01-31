@@ -10,10 +10,11 @@ requires-python = ">=3.12"
 dependencies = [
     "pandas>=2.0.0",
     "openai>=1.0.0",
+    "pyinstaller>=6.18.0",
 ]
 
 [project.scripts]
-dkbparsing = "dkbparsing:main"
+dkbparsing = "dkbparsing.cli:main"
 
 [build-system]
 requires = ["hatchling"]
