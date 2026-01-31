@@ -1,0 +1,119 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "latest"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .venv
+            .uv/cache
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Extract version from pyproject.toml
+        id: get-version
+        run: |
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Install PyInstaller
+        run: uv add pyinstaller --dev
+
+      - name: Build executable
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build_dkbparsing.sh
+
+      - name: Verify build
+        run: |
+          echo "Checking built executable..."
+          ls -lh dist/
+          if [ ! -f "dist/dkbparsing" ]; then
+            echo "❌ Missing executable: dist/dkbparsing"
+            exit 1
+          fi
+          echo "✅ dkbparsing: $(du -h dist/dkbparsing | cut -f1)"
+
+      - name: Create release tag if it doesn't exist
+        id: create-tag
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          TAG="v${VERSION}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping tag creation"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Creating new tag: $TAG"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.create-tag.outputs.tag }}
+          name: Release ${{ steps.create-tag.outputs.tag }}
+          body: |
+            ## Release ${{ steps.create-tag.outputs.tag }}
+
+            This release includes the standalone `dkbparsing` executable.
+
+            ### Installation
+            Download the executable and make it executable:
+            ```bash
+            chmod +x dkbparsing
+            ```
+
+            ### Usage
+            ```bash
+            ./dkbparsing /path/to/accounting.csv --config /path/to/cli_config.json
+            ```
+
+            See the README for detailed usage instructions.
+          files: |
+            dist/dkbparsing
+          draft: false
+          prerelease: false
