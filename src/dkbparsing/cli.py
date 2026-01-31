@@ -62,6 +62,12 @@ def main():
     )
 
     parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version and exit",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -111,6 +117,12 @@ def main():
         level=log_level,
         format="%(levelname)s: %(message)s",
     )
+
+    if args.version:
+        from . import __version__
+
+        logger.info(f"DKB Parsing v{__version__}")
+        sys.exit(0)
 
     # Load config
     config = load_config(args.config)
