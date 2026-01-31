@@ -10,7 +10,8 @@ Install and sync dependencies:
 ```bash
 uv sync
 ```
-For pre-commit hooks, tests etc. ask the LLM of your choice. 
+
+For installing pre-commit hooks, tests etc. ask your LLM-agent.
 
 ## Usage
 
@@ -120,10 +121,8 @@ Example `user_prompt.txt`:
 ```
 ## Existing Manual Assignments:
 {manual_assignments}
-
 ## Uncategorized Transactions:
 {uncategorized_transactions}
-
 Please suggest categories for the uncategorized transactions based on the existing manual assignments as context. Return your suggestions in a clear format.
 ```
 
@@ -132,12 +131,11 @@ Please suggest categories for the uncategorized transactions based on the existi
 Example `system_prompt.txt`:
 ```
 You are a financial transaction categorization assistant. Your task is to suggest appropriate categories for uncategorized bank transactions based on:
-
 1. The transaction details (date, recipient, purpose, amount, IBAN, etc.)
 2. Existing manual assignments that serve as examples of categorization patterns
-
 Analyze the uncategorized transactions and suggest categories that match the patterns seen in the manual assignments.
 ```
+
 
 ### Basic Usage
 
