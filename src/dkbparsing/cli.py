@@ -7,6 +7,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from .openrouter_client import OpenRouterError, call_openrouter
@@ -119,9 +120,10 @@ def main():
     )
 
     if args.version:
-        from . import __version__
-
-        logger.info(f"DKB Parsing v{__version__}")
+        try:
+            logger.info(version("dkbparsing"))
+        except PackageNotFoundError:
+            logger.warning("unknown")
         sys.exit(0)
 
     # Load config
