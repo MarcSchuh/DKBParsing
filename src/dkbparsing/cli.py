@@ -63,12 +63,6 @@ def main():
     )
 
     parser.add_argument(
-        "--version",
-        action="store_true",
-        help="Show version and exit",
-    )
-
-    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -108,6 +102,12 @@ def main():
         nargs=3,
         metavar=("NAME", "DISPLAY_NAME", "SEARCH_STRING"),
         help="Add a new category. Requires --config with category_config set.",
+    )
+
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version and exit",
     )
 
     args = parser.parse_args()
