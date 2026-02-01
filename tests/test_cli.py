@@ -582,6 +582,7 @@ class TestCLIMain:
                 mock_args.add_manual = None
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
                 with (
                     patch("dkbparsing.cli.DKBParser"),
@@ -631,6 +632,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
                 mock_parser.error = Mock(side_effect=SystemExit)
 
@@ -715,6 +717,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
 
                 with (
@@ -828,6 +831,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
 
                 with (
@@ -914,6 +918,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
 
                 with (
@@ -1006,6 +1011,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
 
                 with (
@@ -1118,6 +1124,7 @@ class TestCLIMain:
                 mock_args.verbose = False
                 mock_args.start_date = None
                 mock_args.end_date = None
+                mock_args.version = False
                 mock_parser.parse_args.return_value = mock_args
 
                 with (

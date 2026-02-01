@@ -219,7 +219,13 @@ You can copy this directly into your Excel spreadsheet!
 
 ### Examples
 
-See `examples/` directory for sample configurations: categories, CLI config, templates, manual assignments, and AI prompts.
+See the `examples/` directory for:
+- Sample category configuration (`categories.json`)
+- Example CLI configuration (`cli_config.json`)
+- Household budget template (`household_template.txt`)
+- Manual assignments example (`manual_assignments.json`)
+- System prompt for AI categorization (`system_prompt.txt`)
+- User prompt template for AI categorization (`user_prompt.txt`)
 
 ## License
 

@@ -7,6 +7,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from .openrouter_client import OpenRouterError, call_openrouter
@@ -103,6 +104,12 @@ def main():
         help="Add a new category. Requires --config with category_config set.",
     )
 
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version and exit",
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -111,6 +118,13 @@ def main():
         level=log_level,
         format="%(levelname)s: %(message)s",
     )
+
+    if args.version:
+        try:
+            logger.info(version("dkbparsing"))
+        except PackageNotFoundError:
+            logger.warning("unknown")
+        sys.exit(0)
 
     # Load config
     config = load_config(args.config)
