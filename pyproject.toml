@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "bandit>=1.9.4",
     "mypy>=1.18.2",
     "pre-commit>=4.3.0",
     "pytest>=9.0.3",
