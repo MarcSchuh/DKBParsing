@@ -52,7 +52,9 @@ class DKBCSVParser:
             transactions = []
             for row in rows:
                 try:
-                    transaction = Transaction.from_csv_row(row)
+                    transaction = Transaction.from_csv_row(
+                        {str(column): value for column, value in row.items()},
+                    )
                     transactions.append(transaction)
                 except (ValueError, KeyError, TypeError) as e:
                     logger.warning(f"Could not parse transaction row: {e}")
