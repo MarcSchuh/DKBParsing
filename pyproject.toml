@@ -25,6 +25,7 @@ build-backend = "hatchling.build"
 dev = [
     "bandit>=1.9.4",
     "mypy>=1.18.2",
+    "pandas-stubs>=3.0.5.260730",
     "pip-audit>=2.10.1",
     "pre-commit>=4.3.0",
     "pytest>=9.0.3",
