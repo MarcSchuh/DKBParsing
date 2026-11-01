@@ -1,0 +1,43 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC for PyPI Trusted Publishing
+
+    steps:
+      - name: Set up project
+        uses: ./.github/actions/setup
+        with:
+          python-version: "3.13"
+          sync: "false" # uv build resolves build dependencies on its own
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check if version is already on PyPI
+        id: check-version
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          echo "Version: ${VERSION}"
+          if curl -fsS "https://pypi.org/pypi/dkbparsing/${VERSION}/json" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to PyPI
+        if: steps.check-version.outputs.exists == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1
