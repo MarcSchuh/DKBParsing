@@ -1,0 +1,48 @@
+name: Set up project
+description: Checkout, Python, uv, system dependencies and dependency sync
+inputs:
+  python-version:
+    description: Python version to set up
+    required: true
+  uv-version:
+    description: uv version to install
+    required: false
+    default: "latest"
+  fetch-depth:
+    description: Value for actions/checkout fetch-depth
+    required: false
+    default: "1"
+  sync:
+    description: Whether to run "uv sync --all-groups"
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: ${{ inputs.uv-version }}
+        enable-cache: true
+
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libdbus-1-dev libglib2.0-dev
+
+    - name: Install dependencies
+      if: inputs.sync == 'true'
+      shell: bash
+      run: uv sync --all-groups
