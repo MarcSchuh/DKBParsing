@@ -16,12 +16,16 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up project
         uses: ./.github/actions/setup
         with:
           python-version: "3.13"
           uv-version: ${{ env.UV_VERSION }}
-          fetch-depth: "0"
 
       - name: Extract version from pyproject.toml
         id: get-version

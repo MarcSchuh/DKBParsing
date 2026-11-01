@@ -1,5 +1,5 @@
 name: Set up project
-description: Checkout, Python, uv, system dependencies and dependency sync
+description: Python, uv, system dependencies and dependency sync
 inputs:
   python-version:
     description: Python version to set up
@@ -8,10 +8,6 @@ inputs:
     description: uv version to install
     required: false
     default: "latest"
-  fetch-depth:
-    description: Value for actions/checkout fetch-depth
-    required: false
-    default: "1"
   sync:
     description: Whether to run "uv sync --all-groups"
     required: false
@@ -20,11 +16,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }}
-
     - name: Set up Python ${{ inputs.python-version }}
       uses: actions/setup-python@v5
       with:
