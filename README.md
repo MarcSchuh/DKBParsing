@@ -6,7 +6,7 @@ It also offers AI-powered categorization suggestions using OpenRouter API to hel
 
 ## Standalone Executable (Recommended)
 
-Download the pre-built executable from the [latest release](https://github.com/yourusername/DKBParsing/releases/latest) - no installation required!
+Download the pre-built executable from the [latest release](https://github.com/MarcSchuh/DKBParsing/releases/latest) - no installation required!
 
 ```bash
 # Make executable

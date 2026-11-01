@@ -1,7 +1,7 @@
 [project]
 name = "dkbparsing"
-version = "0.1.10"
-description = "Add your description here"
+version = "0.1.11"
+description = "A Python tool for parsing and categorizing DKB account statement CSV exports"
 readme = "README.md"
 authors = [
     { name = "Marc Schuh", email = "dkbparsing@marc-schuh.de" }
@@ -10,8 +10,6 @@ requires-python = ">=3.13"
 dependencies = [
     "pandas>=2.0.0",
     "openai>=1.0.0",
-    "pyinstaller>=6.18.0",
-    "ruff>=0.14.14",
 ]
 
 [project.scripts]
@@ -27,6 +25,7 @@ dev = [
     "mypy>=1.18.2",
     "pandas-stubs>=3.0.5.260730",
     "pip-audit>=2.10.1",
+    "pyinstaller>=6.18.0",
     "pre-commit>=4.3.0",
     "pytest>=9.0.3",
     "pytest-cov>=7.0.0",
@@ -64,8 +63,8 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Assume Python 3.12+
-target-version = "py312"
+# Assume Python 3.13+
+target-version = "py313"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
@@ -97,7 +96,7 @@ select = [
 ]
 
 ignore = [
-    "E501",  # line too long, handled by black
+    "E501",  # line too long, handled by ruff format
     "B008",  # do not perform function calls in argument defaults
     "B006",  # do not use mutable data structures for argument defaults
     "C901",  # too complex

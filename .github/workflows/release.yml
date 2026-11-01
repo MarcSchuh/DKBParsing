@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
   UV_VERSION: "latest"
 
 jobs:
@@ -52,9 +52,6 @@ jobs:
           VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
-
-      - name: Install PyInstaller
-        run: uv add pyinstaller --dev
 
       - name: Build executable
         run: |
