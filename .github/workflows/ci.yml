@@ -12,8 +12,8 @@ env:
 jobs:
   # Note: the job name including the matrix suffix ("lint-and-test (3.13)")
   # is a required status check in the repository ruleset — keep it in sync.
+  # Do not set a "name:" property: it would change the check-run name.
   lint-and-test:
-    name: Lint and Test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
