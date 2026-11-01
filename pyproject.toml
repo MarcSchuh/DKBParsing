@@ -1,6 +1,6 @@
 [project]
 name = "dkbparsing"
-version = "0.1.13"
+version = "0.1.14"
 description = "A Python tool for parsing and categorizing DKB account statement CSV exports"
 readme = "README.md"
 license = "Apache-2.0"
