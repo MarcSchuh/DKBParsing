@@ -6,6 +6,13 @@ on:
       - main
   workflow_dispatch:
 
+# Serialize release runs: rapid successive merges otherwise race when
+# creating the same tag, and the first run tags a commit that is no
+# longer the branch head (which the Actions bot may not push).
+concurrency:
+  group: build-and-release
+  cancel-in-progress: false
+
 env:
   UV_VERSION: "latest"
 
@@ -20,6 +27,17 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      # Always release the latest main, not the (possibly outdated)
+      # commit that triggered this run. Tagging a stale commit whose
+      # workflow files differ from the current branch head makes GitHub
+      # reject the tag push: "refusing to allow a GitHub App to create
+      # or update workflow ...".
+      - name: Fast-forward to latest main
+        run: |
+          git fetch origin
+          git reset --hard origin/main
+          echo "Releasing commit: $(git log -1 --oneline)"
 
       - name: Set up project
         uses: ./.github/actions/setup
