@@ -28,6 +28,9 @@ rm -rf "${PACKAGE_ROOT}"
 mkdir -p "${PACKAGE_ROOT}/DEBIAN"
 mkdir -p "${PACKAGE_ROOT}/usr/bin"
 
+# dpkg-deb requires the package and control directories to be <= 0775
+chmod 0755 "${PACKAGE_ROOT}" "${PACKAGE_ROOT}/DEBIAN"
+
 install -m 0755 dist/dkbparsing "${PACKAGE_ROOT}/usr/bin/dkbparsing"
 
 cat > "${PACKAGE_ROOT}/DEBIAN/control" <<EOF
