@@ -19,6 +19,21 @@ chmod +x dkbparsing
 
 **Note:** Currently available for Linux only.
 
+## Installation via apt (Linux)
+
+The project is also available as an apt repository hosted on GitHub Pages
+(amd64 only). See `docs/APT_REPO_SETUP.md` for the one-time repository setup.
+
+```bash
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://marcschuh.github.io/DKBParsing/public.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/dkbparsing.gpg
+echo "deb [signed-by=/etc/apt/keyrings/dkbparsing.gpg] https://marcschuh.github.io/DKBParsing/ stable main" \
+  | sudo tee /etc/apt/sources.list.d/dkbparsing.list
+sudo apt update
+sudo apt install dkbparsing
+```
+
 ## Getting Ready
 
 Install and sync dependencies:
