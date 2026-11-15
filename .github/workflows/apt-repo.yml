@@ -1,0 +1,167 @@
+name: Publish apt repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to package (empty = latest release)"
+        required: false
+        default: ""
+        type: string
+
+# Serialize publish runs: concurrent metadata regeneration would race
+# when updating the apt branch.
+concurrency:
+  group: publish-apt-repository
+  cancel-in-progress: false
+
+env:
+  UV_VERSION: "latest"
+  APT_BRANCH: "apt"
+  APT_SUITE: "stable"
+  APT_COMPONENT: "main"
+  APT_ARCHITECTURE: "amd64"
+
+jobs:
+  publish:
+    name: Build .deb and publish apt repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Determine tag to build
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [ -n "${DISPATCH_TAG}" ]; then
+            TAG="${DISPATCH_TAG}"
+          else
+            TAG=$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq '.tagName')
+          fi
+          echo "Packaging ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Set up project
+        uses: ./.github/actions/setup
+        with:
+          python-version: "3.13"
+          uv-version: ${{ env.UV_VERSION }}
+
+      - name: Build executable
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build_dkbparsing.sh
+
+      - name: Build .deb package
+        run: ./scripts/build_deb_package.sh
+
+      - name: Upload .deb to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          gh release upload "${{ steps.tag.outputs.tag }}" "dist/dkbparsing_${VERSION}_amd64.deb" --clobber
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils
+
+      - name: Import signing key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APT_GPG_PRIVATE_KEY}" ]; then
+            echo "::error::Secret APT_GPG_PRIVATE_KEY is not set. See docs/APT_REPO_SETUP.md for instructions."
+            exit 1
+          fi
+          echo "${APT_GPG_PRIVATE_KEY}" | gpg --batch --import
+          GPG_KEY_FPR=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
+          echo "Using signing key ${GPG_KEY_FPR}"
+          echo "GPG_KEY_FPR=${GPG_KEY_FPR}" >> "$GITHUB_ENV"
+
+      - name: Check out apt repository branch
+        run: |
+          set -euo pipefail
+          mkdir -p apt-repo
+          cd apt-repo
+          git init -b "${APT_BRANCH}"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch --depth=1 origin "${APT_BRANCH}"; then
+            git reset --hard FETCH_HEAD
+          else
+            echo "Branch ${APT_BRANCH} does not exist yet, it will be created."
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add package to repository
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          PACKAGE="dist/dkbparsing_${VERSION}_amd64.deb"
+          if [ ! -f "${PACKAGE}" ]; then
+            echo "::error::${PACKAGE} not found"
+            exit 1
+          fi
+          mkdir -p "apt-repo/pool/${APT_COMPONENT}/d/dkbparsing"
+          cp "${PACKAGE}" "apt-repo/pool/${APT_COMPONENT}/d/dkbparsing/"
+
+      - name: Regenerate repository metadata
+        run: |
+          set -euo pipefail
+          cd apt-repo
+          PKGDIR="dists/${APT_SUITE}/${APT_COMPONENT}/binary-${APT_ARCHITECTURE}"
+          mkdir -p "${PKGDIR}"
+          apt-ftparchive packages pool > "${PKGDIR}/Packages"
+          gzip -9c "${PKGDIR}/Packages" > "${PKGDIR}/Packages.gz"
+          xz -9c "${PKGDIR}/Packages" > "${PKGDIR}/Packages.xz"
+          apt-ftparchive -c "${GITHUB_WORKSPACE}/scripts/apt/apt-ftparchive.conf" \
+            release "dists/${APT_SUITE}" > "dists/${APT_SUITE}/Release"
+
+      - name: Sign repository metadata
+        env:
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          cd apt-repo
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${APT_GPG_PASSPHRASE}" \
+            --local-user "${GPG_KEY_FPR}" --digest-algo SHA256 \
+            --clearsign --output "dists/${APT_SUITE}/InRelease" "dists/${APT_SUITE}/Release"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${APT_GPG_PASSPHRASE}" \
+            --local-user "${GPG_KEY_FPR}" --digest-algo SHA256 \
+            --detach-sign --armor --output "dists/${APT_SUITE}/Release.gpg" "dists/${APT_SUITE}/Release"
+          gpg --armor --export "${GPG_KEY_FPR}" > public.key
+
+      - name: Publish apt repository branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          cd apt-repo
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No repository changes, nothing to publish."
+            exit 0
+          fi
+          git commit -m "Add dkbparsing ${VERSION} (built from ${{ steps.tag.outputs.tag }})"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${APT_BRANCH}"
+          echo "Repository published to branch ${APT_BRANCH}."
+          echo "It will be served at https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
